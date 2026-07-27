@@ -1,0 +1,57 @@
+name: 每日创作内容生成
+
+on:
+  schedule:
+    # 北京时间 早8点 / 下午2点 / 晚8点 => UTC 0:00 / 6:00 / 12:00
+    - cron: "0 0,6,12 * * *"
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "手动触发说明（可选）"
+        required: false
+        default: "manual"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 运行生成器（抓取热榜 + AI 改写 + 推送 Gist）
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          MAMA_PAT: ${{ secrets.MAMA_PAT }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+          WX_ALBUM_URL: ${{ secrets.WX_ALBUM_URL }}
+        run: python3 gen.py
+
+      - name: 打印运行产物（调试用）
+        if: always()
+        run: |
+          echo "---- last_run.json 摘要 ----"
+          python3 - <<'PY'
+          import json,sys
+          try:
+              d=json.load(open('last_run.json',encoding='utf-8'))
+              print('date:', d.get('date'))
+              print('inspire:', len(d.get('topic_inspirations',[])))
+              print('remix:', len(d.get('remix_angles',[])))
+              print('img:', len(d.get('image_copywriting',[])))
+              print('math:', len(d.get('mental_math',[])))
+              eng=d.get('english',{})
+              print('english words:', len(eng.get('words',[])))
+          except Exception as e:
+              print('no last_run.json:', e)
+          PY

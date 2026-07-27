@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ff4d8d">
+<title>宝妈创作台 · 移动端工作台</title>
+<style>
+  :root{
+    --pink:#ff4d8d; --pink-deep:#ff2e74; --pink-soft:#ffe3ee; --pink-bg:#fff5f8;
+    --ink:#3a2b32; --muted:#9a8b92; --card:#ffffff; --line:#ffe0ea; --ok:#27c08a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:#f1e7ec; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink);}
+  body{display:flex; justify-content:center;}
+  .phone{width:100%; max-width:480px; min-height:100vh; background:var(--pink-bg); position:relative; box-shadow:0 0 40px rgba(255,77,141,.10); padding-bottom:84px;}
+  @media(min-width:520px){ body{padding:18px 0;} .phone{border-radius:34px; min-height:calc(100vh - 36px); overflow:hidden;} }
+
+  .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:10px; padding:14px 16px; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; box-shadow:0 4px 16px rgba(255,46,116,.25);}
+  .topbar .ham{width:38px; height:38px; border:none; border-radius:12px; background:rgba(255,255,255,.2); color:#fff; font-size:20px; cursor:pointer;}
+  .topbar .title{font-size:18px; font-weight:800; letter-spacing:.5px;}
+  .topbar .sub{font-size:11px; opacity:.85; font-weight:500;}
+  .topbar .spacer{flex:1;}
+  .topbar .refresh{width:38px; height:38px; border:none; border-radius:12px; background:rgba(255,255,255,.2); color:#fff; font-size:18px; cursor:pointer;}
+  .topbar .refresh.spin{animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .mask{position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:.25s; z-index:40;}
+  .mask.open{opacity:1; pointer-events:auto;}
+  .drawer{position:fixed; top:0; left:0; height:100%; width:78%; max-width:320px; background:#fff; z-index:50; transform:translateX(-102%); transition:.28s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; box-shadow:6px 0 30px rgba(0,0,0,.18);}
+  .drawer.open{transform:translateX(0);}
+  .drawer .dhead{padding:26px 18px 16px; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff;}
+  .drawer .dhead .ava{width:54px; height:54px; border-radius:50%; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:10px;}
+  .drawer .dhead .nm{font-size:18px; font-weight:800;}
+  .drawer .dhead .tg{font-size:12px; opacity:.9; margin-top:2px;}
+  .nav{padding:10px; overflow:auto; flex:1;}
+  .nav button{display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:none; background:transparent; padding:14px 14px; border-radius:14px; font-size:15px; color:var(--ink); cursor:pointer; margin-bottom:4px; font-weight:600;}
+  .nav button .ic{width:34px; height:34px; border-radius:10px; background:var(--pink-soft); color:var(--pink-deep); display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;}
+  .nav button.active{background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff;}
+  .nav button.active .ic{background:rgba(255,255,255,.25); color:#fff;}
+  .dfoot{padding:12px 16px; font-size:11px; color:var(--muted); border-top:1px solid #f2e8ec;}
+
+  .view{padding:16px;}
+  .hidden{display:none!important;}
+  .card{background:var(--card); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 6px 18px rgba(255,77,141,.10); border:1px solid #fff0f5;}
+  .card h3{margin:0 0 12px; font-size:16px; display:flex; align-items:center; gap:8px;}
+  .card h3 .dot{width:8px; height:8px; border-radius:50%; background:var(--pink);}
+  .muted{color:var(--muted); font-size:13px;}
+  .pill{display:inline-block; background:var(--pink-soft); color:var(--pink-deep); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700;}
+
+  .prog{height:12px; border-radius:999px; background:#ffe7f0; overflow:hidden; margin:6px 0 4px;}
+  .prog > i{display:block; height:100%; background:linear-gradient(90deg,var(--pink),var(--pink-deep)); transition:.4s;}
+
+  .item{display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border-radius:13px; background:#fff7fa; margin-bottom:8px; border:1px solid #ffe9f1;}
+  .item.done{opacity:.6;}
+  .item .cb{width:22px; height:22px; border-radius:7px; border:2px solid var(--pink); flex:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; background:#fff; margin-top:1px;}
+  .item.done .cb{background:var(--pink);}
+  .item.done .tx{text-decoration:line-through;}
+  .item .tx{flex:1; font-size:14px; line-height:1.45; border:none; background:transparent; color:var(--ink); width:100%; resize:none; font-family:inherit;}
+  .item .del{border:none; background:transparent; color:#cc9aa8; font-size:16px; cursor:pointer; padding:0 4px;}
+  .addrow{display:flex; gap:8px; margin-top:6px;}
+  .addrow input{flex:1; border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:14px; font-family:inherit; background:#fff;}
+  .btn{border:none; border-radius:12px; padding:11px 16px; font-size:14px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; box-shadow:0 4px 12px rgba(255,46,116,.3);}
+  .btn.ghost{background:#fff; color:var(--pink-deep); border:1px solid var(--line); box-shadow:none;}
+  .btn.sm{padding:7px 11px; font-size:12px;}
+
+  .post{background:var(--card); border-radius:18px; padding:15px; margin-bottom:13px; box-shadow:0 6px 18px rgba(255,77,141,.10); border:1px solid #fff0f5; border-left:5px solid var(--pink);}
+  .post .ttl{font-size:16px; font-weight:800; line-height:1.4; margin-bottom:6px;}
+  .post .tag{color:var(--pink-deep); font-size:13px; font-weight:700; margin-bottom:6px;}
+  .post .desc{font-size:14px; line-height:1.6; color:#5a4a52;}
+  .post .row{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .post .meta{font-size:13px; color:#6a5a62; line-height:1.6; margin:4px 0;}
+  .post .meta b{color:var(--pink-deep);}
+  .badge{font-size:11px; padding:2px 8px; border-radius:999px; background:var(--pink-soft); color:var(--pink-deep); font-weight:700;}
+  .jump{display:inline-flex; align-items:center; gap:4px; border:none; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer; color:#fff;}
+  .j-douyin{background:#161823;} .j-xhs{background:#ff2741;} .j-bili{background:#fb7299;} .j-quark{background:#5b8def;}
+
+  .tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .tabs button{flex:1; border:1px solid var(--line); background:#fff; border-radius:12px; padding:10px; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer;}
+  .tabs button.active{background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; border-color:transparent;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .fld{display:flex; flex-direction:column; gap:5px; margin-bottom:10px;}
+  .fld label{font-size:13px; font-weight:700; color:#6a5a62;}
+  .fld input, .fld textarea, .fld select{border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; font-family:inherit; background:#fff; width:100%;}
+  .fld textarea{resize:vertical; min-height:54px;}
+
+  .mathbox{text-align:center; padding:18px 10px;}
+  .mathq{font-size:40px; font-weight:800; letter-spacing:1px; color:var(--ink); margin:6px 0 14px;}
+  .mathans{font-size:22px; font-weight:800; color:var(--pink-deep); margin:8px 0;}
+  .mathbox input{width:160px; text-align:center; font-size:24px; border:2px solid var(--line); border-radius:14px; padding:8px; font-family:inherit;}
+
+  .word{background:#fff7fa; border:1px solid #ffe9f1; border-radius:14px; padding:12px; margin-bottom:9px; display:flex; align-items:flex-start; gap:10px;}
+  .word .en{font-size:17px; font-weight:800; color:var(--pink-deep);}
+  .word .ph{font-size:13px; color:var(--muted);}
+  .word .mn{font-size:14px; margin-top:2px;}
+  .word .ex{font-size:13px; color:#6a5a62; margin-top:2px; font-style:italic;}
+  .spk{border:none; background:var(--pink-soft); color:var(--pink-deep); border-radius:50%; width:38px; height:38px; font-size:17px; cursor:pointer; flex:none;}
+
+  .shadow{background:#fff7fa; border:1px solid #ffe9f1; border-radius:14px; padding:14px; line-height:1.9; font-size:18px;}
+  .shadow span.hl{background:var(--pink); color:#fff; border-radius:6px; padding:0 3px;}
+  .searchbox{display:flex; gap:8px; margin:10px 0;}
+  .searchbox input{flex:1; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; font-family:inherit;}
+
+  .hero{background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; border-radius:22px; padding:20px 18px; margin-bottom:14px; box-shadow:0 10px 26px rgba(255,46,116,.32);}
+  .hero .hi{font-size:13px; opacity:.9;}
+  .hero .date{font-size:22px; font-weight:800; margin:4px 0 12px;}
+  .quick{display:flex; gap:10px;}
+  .quick button{flex:1; border:none; border-radius:14px; padding:12px 6px; font-size:12px; font-weight:700; color:#fff; cursor:pointer; background:rgba(255,255,255,.18); display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .quick button .e{font-size:20px;}
+  .stat{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; text-align:center;}
+  .stat .b{background:#fff; border-radius:14px; padding:12px 4px; box-shadow:0 4px 12px rgba(255,77,141,.08);}
+  .stat .n{font-size:20px; font-weight:800; color:var(--pink-deep);}
+  .stat .l{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  .status{font-size:12px; color:var(--muted); text-align:center; padding:6px;}
+  .toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%); background:rgba(40,30,36,.92); color:#fff; padding:9px 16px; border-radius:999px; font-size:13px; z-index:60; opacity:0; transition:.25s; pointer-events:none;}
+  .toast.show{opacity:1;}
+
+  .bottom{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; gap:8px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:rgba(255,255,255,.96); border-top:1px solid #ffe0ea; backdrop-filter:blur(6px); z-index:35;}
+  .bottom button{flex:1; border:none; border-radius:14px; padding:11px; font-size:14px; font-weight:800; cursor:pointer; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; box-shadow:0 4px 12px rgba(255,46,116,.3);}
+  .bottom button.ghost{background:#fff; color:var(--pink-deep); border:1px solid var(--line); box-shadow:none; flex:none; padding:11px 16px;}
+
+  .empty{text-align:center; color:var(--muted); padding:30px 16px; font-size:14px; line-height:1.7;}
+  .empty .big{font-size:34px; margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="topbar">
+    <button class="ham" onclick="toggleDrawer()">☰</button>
+    <div>
+      <div class="title">宝妈创作台</div>
+      <div class="sub" id="subDate"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="refresh" id="refreshBtn" onclick="refresh()">⟳</button>
+  </div>
+
+  <div class="view" id="view-home">
+    <div class="hero">
+      <div class="hi" id="heroHi">早安，今天也要加油呀</div>
+      <div class="date" id="heroDate"></div>
+      <div class="quick">
+        <button onclick="openApp('douyin')"><span class="e">🎵</span>抖音</button>
+        <button onclick="openApp('xhs')"><span class="e">📕</span>小红书</button>
+        <button onclick="openApp('bili')"><span class="e">📺</span>B站</button>
+        <button onclick="openApp('quark')"><span class="e">⚡</span>夸克</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日创作速览</h3>
+      <div class="stat" id="homeStat"></div>
+      <div class="status" id="homeStatus" style="margin-top:10px;"></div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn sm ghost" onclick="openView('inspire')">看选题灵感 →</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>我的每日工作流</h3>
+      <div class="muted" style="line-height:1.9;">① 打开「选题灵感 / 图片文案」抄今天的钩子与金句 → ② 用「爆款二创」找角度 → ③ 拍完到「内容复盘」记数据 → ④ 碎片时间刷「英语 / 速算」。</div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-plan">
+    <div class="card">
+      <h3><span class="dot"></span>每日计划 <span class="pill" id="planCount"></span></h3>
+      <div class="prog"><i id="planBar" style="width:0%"></i></div>
+      <div class="muted" id="planPct" style="margin-bottom:8px;"></div>
+      <div id="planList"></div>
+      <div class="addrow">
+        <input id="planInput" placeholder="加一项今日计划…" onkeydown="if(event.key==='Enter')addPlan()">
+        <button class="btn sm" onclick="addPlan()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-inspire">
+    <div class="tabs">
+      <button id="tabIdea" class="active" onclick="setInspireTab('idea')">灵感清单</button>
+      <button id="tabImg" onclick="setInspireTab('img')">图片文案</button>
+    </div>
+    <div id="inspireList"></div>
+    <div id="imgList" class="hidden"></div>
+  </div>
+
+  <div class="view hidden" id="view-remix">
+    <div id="remixList"></div>
+  </div>
+
+  <div class="view hidden" id="view-review">
+    <div class="card">
+      <h3><span class="dot"></span>新增一条复盘</h3>
+      <div class="grid2">
+        <div class="fld"><label>平台</label><select id="rvPlatform"><option>抖音</option><option>小红书</option><option>B站</option><option>视频号</option><option>其他</option></select></div>
+        <div class="fld"><label>日期</label><input id="rvDate" type="date"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label>播放</label><input id="rvPlay" type="number" placeholder="0"></div>
+        <div class="fld"><label>点赞</label><input id="rvLike" type="number" placeholder="0"></div>
+        <div class="fld"><label>评论</label><input id="rvComment" type="number" placeholder="0"></div>
+        <div class="fld"><label>转发</label><input id="rvShare" type="number" placeholder="0"></div>
+      </div>
+      <div class="fld"><label>亮点</label><textarea id="rvGood" placeholder="这条为什么数据好？"></textarea></div>
+      <div class="fld"><label>问题</label><textarea id="rvBad" placeholder="哪里可以更好？"></textarea></div>
+      <div class="fld"><label>优化（下次这么做）</label><textarea id="rvOpt" placeholder="下次改进动作…"></textarea></div>
+      <button class="btn" onclick="saveReview()">保存复盘</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>历史复盘 <span class="pill" id="rvCount"></span></h3>
+      <div id="reviewList"></div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-memo">
+    <div class="card">
+      <h3><span class="dot"></span>备忘录</h3>
+      <div id="memoList"></div>
+      <div class="addrow">
+        <input id="memoInput" placeholder="加一行备忘…" onkeydown="if(event.key==='Enter')addMemo()">
+        <button class="btn sm" onclick="addMemo()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-math">
+    <div class="card">
+      <h3><span class="dot"></span>速算练习 <span class="pill" id="mathProg"></span></h3>
+      <div class="mathbox">
+        <div class="muted">今日题包（来自微信专辑 / 本地生成）</div>
+        <div class="mathq" id="mathQ"></div>
+        <input id="mathA" type="number" placeholder="?">
+        <div class="mathans" id="mathR"></div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn sm ghost" onclick="checkMath()">提交</button>
+          <button class="btn sm ghost" onclick="mathPrev()">上一题</button>
+          <button class="btn sm ghost" onclick="mathNext()">下一题</button>
+        </div>
+        <div style="margin-top:10px;"><button class="btn sm" onclick="reloadMath()">换一批</button></div>
+        <div class="status" id="mathScore"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-english">
+    <div class="card">
+      <h3><span class="dot"></span>成年人零基础 · 30天计划</h3>
+      <div id="enPlan" class="muted" style="line-height:1.8;"></div>
+      <div class="status" id="enDay"></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日单词 <span class="pill">跟着读</span></h3>
+      <div id="enWords"></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日语法</h3>
+      <div id="enGrammar" class="muted" style="font-size:14px;line-height:1.7;"></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>影子跟读（逐字跟读）</h3>
+      <div class="shadow" id="shadowText"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn sm" onclick="shadowPlay()">▶ 逐字跟读</button>
+        <button class="btn sm ghost" onclick="shadowRecord()" id="recBtn">● 录我的</button>
+        <button class="btn sm ghost" onclick="shadowPlayback()" id="pbBtn" style="display:none;">♪ 听我的</button>
+      </div>
+      <div class="searchbox">
+        <input id="enSearch" placeholder="搜跟读素材，如 baby morning routine">
+        <button class="btn sm ghost" onclick="enSearch('youglish')">YouGlish</button>
+        <button class="btn sm ghost" onclick="enSearch('youtube')">YouTube</button>
+        <button class="btn sm ghost" onclick="enSearch('bing')">Bing</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <button class="ghost" onclick="refresh()">⟳ 刷新今日</button>
+    <button onclick="scrollTop()">回到顶部</button>
+  </div>
+</div>
+
+<div class="mask" id="mask" onclick="toggleDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="dhead">
+    <div class="ava">👩‍👧</div>
+    <div class="nm">宝妈勇闯自媒体</div>
+    <div class="tg">移动端创作工作台 · 数据存本地</div>
+  </div>
+  <div class="nav" id="nav">
+    <button data-v="home" class="active" onclick="openView('home')"><span class="ic">🏠</span>首页</button>
+    <button data-v="plan" onclick="openView('plan')"><span class="ic">✅</span>每日计划</button>
+    <button data-v="inspire" onclick="openView('inspire')"><span class="ic">💡</span>选题灵感</button>
+    <button data-v="remix" onclick="openView('remix')"><span class="ic">🔥</span>爆款二创</button>
+    <button data-v="review" onclick="openView('review')"><span class="ic">📊</span>内容复盘</button>
+    <button data-v="memo" onclick="openView('memo')"><span class="ic">📝</span>备忘录</button>
+    <button data-v="math" onclick="openView('math')"><span class="ic">🧮</span>速算练习</button>
+    <button data-v="english" onclick="openView('english')"><span class="ic">🔤</span>英语练习</button>
+  </div>
+  <div class="dfoot">内容每天早8/下午2/晚8 自动更新 · 来源 GitHub Gist</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 基础工具 ============ */
+const GIST_ID = 'e6a67778926366fcb97bc42d69a20eb7';
+const $ = sel => document.querySelector(sel);
+const $all = sel => Array.from(document.querySelectorAll(sel));
+const $id = id => document.getElementById(id);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function LS(k,v){ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function toast(m){ const t = $id('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1600); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+/* ============ 深链唤起 App ============ */
+const PLAT = {
+  douyin:{scheme:'snssdk1128://', web:'https://www.douyin.com/search?keyword='},
+  bili:{scheme:'bilibili://', web:'https://search.bilibili.com/all?keyword='},
+  xhs:{scheme:'xhsdiscover://', web:'https://www.xiaohongshu.com/search_result?keyword='},
+  quark:{scheme:'quark://', web:'https://www.quark.cn'}
+};
+function openApp(p, kw){
+  const c = PLAT[p]; if(!c) return;
+  const url = c.web + encodeURIComponent(kw||'');
+  if(c.scheme){
+    const t = Date.now();
+    try{ location.href = c.scheme + (kw?('?keyword='+encodeURIComponent(kw)):''); }catch(e){}
+    setTimeout(()=>{ if(Date.now()-t < 2500) window.open(url,'_blank'); }, 700);
+  } else {
+    window.open(url,'_blank');
+  }
+}
+
+/* ============ 抽屉 / 视图 ============ */
+function toggleDrawer(){ $id('drawer').classList.toggle('open'); $id('mask').classList.toggle('open'); }
+function openView(v){
+  $all('.view').forEach(el=>el.classList.add('hidden'));
+  $id('view-'+v).classList.remove('hidden');
+  $all('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===v));
+  $id('drawer').classList.remove('open'); $id('mask').classList.remove('open');
+  state.view = v;
+  if(v==='plan') renderPlan();
+  if(v==='memo') renderMemo();
+  if(v==='review') renderReview();
+  if(v==='math') renderMath();
+  if(v==='english') renderEnglish();
+  if(v==='inspire'){ renderInspire(); renderImg(); }
+  if(v==='remix') renderRemix();
+  if(v==='home') renderHome();
+  window.scrollTo(0,0);
+}
+function scrollTop(){ window.scrollTo({top:0,behavior:'smooth'}); }
+
+/* ============ 状态 ============ */
+const state = { daily:null, view:'home', inspireTab:'idea', mathIdx:0, mathRight:0, mathWrong:0, recBlob:null };
+
+/* ============ 拉取 Gist ============ */
+async function loadDaily(force){
+  if(force){ $id('refreshBtn').classList.add('spin'); }
+  try{
+    const url = 'https://api.github.com/gists/'+GIST_ID + (force?('?t='+Date.now()):'');
+    const r = await fetch(url, {headers:{'Accept':'application/vnd.github+json'}});
+    const d = await r.json();
+    const content = d.files['mama-daily.json'].content;
+    const data = JSON.parse(content);
+    state.daily = data;
+    LS('mama_daily_cache', data);
+    setStatus('已更新 ' + (data.updated_at||'').replace('T',' '));
+  }catch(e){
+    const cache = LS('mama_daily_cache');
+    if(cache){ state.daily = cache; setStatus('（离线缓存）'); }
+    else setStatus('加载失败，点刷新重试');
+  }finally{
+    $id('refreshBtn').classList.remove('spin');
+    renderAll();
+  }
+}
+function setStatus(t){ $id('homeStatus').textContent = t; }
+
+/* ============ 首页 ============ */
+function renderHome(){
+  const d = state.daily || {};
+  const h = new Date().getHours();
+  $id('heroHi').textContent = h<11?'早安，今天也要加油呀':(h<18?'午安，创作进度如何？':'晚安，记得复盘今天');
+  const now = new Date();
+  $id('heroDate').textContent = now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  $id('subDate').textContent = now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  const ins = (d.topic_inspirations||[]).length;
+  const rem = (d.remix_angles||[]).length;
+  const img = (d.image_copywriting||[]).length;
+  const enw = ((d.english||{}).words||[]).length;
+  $id('homeStat').innerHTML =
+    '<div class="b"><div class="n">'+ins+'</div><div class="l">选题</div></div>'+
+    '<div class="b"><div class="n">'+rem+'</div><div class="l">二创</div></div>'+
+    '<div class="b"><div class="n">'+img+'</div><div class="l">图片</div></div>'+
+    '<div class="b"><div class="n">'+enw+'</div><div class="l">单词</div></div>';
+}
+function renderAll(){
+  renderHome(); renderPlan(); renderMemo(); renderReview();
+  renderMath(); renderEnglish(); renderInspire(); renderImg(); renderRemix();
+}
+
+/* ============ 每日计划 ============ */
+function getPlan(){
+  const t = today();
+  let p = LS('mama_plan');
+  if(!p || p.date!==t){
+    p = {date:t, items:[
+      {t:'发一条今日选题视频',done:false},
+      {t:'写 3 条图片文案',done:false},
+      {t:'做一次内容复盘',done:false}
+    ]};
+    LS('mama_plan', p);
+  }
+  return p;
+}
+function renderPlan(){
+  const p = getPlan();
+  const done = p.items.filter(i=>i.done).length;
+  const total = p.items.length;
+  const pct = total? Math.round(done/total*100):0;
+  $id('planBar').style.width = pct+'%';
+  $id('planCount').textContent = done+'/'+total;
+  $id('planPct').textContent = '完成度 '+pct+'%';
+  $id('planList').innerHTML = p.items.map((it,i)=>
+    '<div class="item '+(it.done?'done':'')+'">'+
+      '<div class="cb" onclick="togglePlan('+i+')">'+(it.done?'✓':'')+'</div>'+
+      '<textarea class="tx" rows="1" oninput="editPlan('+i+',this.value)">'+esc(it.t)+'</textarea>'+
+      '<button class="del" onclick="delPlan('+i+')">✕</button>'+
+    '</div>').join('') || '<div class="empty">还没有计划，加一项吧</div>';
+}
+function togglePlan(i){ const p=getPlan(); p.items[i].done=!p.items[i].done; LS('mama_plan',p); renderPlan(); }
+function editPlan(i,v){ const p=getPlan(); p.items[i].t=v; LS('mama_plan',p); }
+function delPlan(i){ const p=getPlan(); p.items.splice(i,1); LS('mama_plan',p); renderPlan(); }
+function addPlan(){ const v=$id('planInput').value.trim(); if(!v) return; const p=getPlan(); p.items.push({t:v,done:false}); LS('mama_plan',p); $id('planInput').value=''; renderPlan(); }
+
+/* ============ 选题灵感 + 图片文案 ============ */
+function setInspireTab(tab){
+  state.inspireTab = tab;
+  $id('tabIdea').classList.toggle('active', tab==='idea');
+  $id('tabImg').classList.toggle('active', tab==='img');
+  $id('inspireList').classList.toggle('hidden', tab!=='idea');
+  $id('imgList').classList.toggle('hidden', tab!=='img');
+}
+function renderInspire(){
+  const list = (state.daily&&state.daily.topic_inspirations)||[];
+  if(!list.length){ $id('inspireList').innerHTML = emptyHTML(); return; }
+  $id('inspireList').innerHTML = list.map(x=>{
+    const p = x.platform||'douyin';
+    const pm = {douyin:'抖音',bili:'B站',xhs:'小红书'}[p]||'抖音';
+    return '<div class="post">'+
+      '<div class="ttl">'+esc(x.title)+'</div>'+
+      '<div class="tag">'+esc(x.tag||'')+'</div>'+
+      '<div class="desc">'+esc(x.desc||'')+'</div>'+
+      '<div class="row">'+
+        '<button class="jump j-douyin" onclick="openApp(\'douyin\',\''+esc(x.title)+'\')">抖音搜</button>'+
+        '<button class="jump j-xhs" onclick="openApp(\'xhs\',\''+esc(x.title)+'\')">小红书</button>'+
+        '<button class="jump j-bili" onclick="openApp(\'bili\',\''+esc(x.title)+'\')">B站</button>'+
+      '</div>'+
+      '<div class="muted" style="margin-top:6px;">推荐主推：<b>'+pm+'</b></div>'+
+    '</div>';
+  }).join('');
+}
+function renderImg(){
+  const list = (state.daily&&state.daily.image_copywriting)||[];
+  if(!list.length){ $id('imgList').innerHTML = emptyHTML(); return; }
+  $id('imgList').innerHTML = list.map((x,i)=>
+    '<div class="post">'+
+      '<div class="ttl" style="color:var(--pink-deep);">'+esc(x.hook)+'</div>'+
+      '<div class="meta"><b>金句（原文）：</b>'+esc(x.quote||'')+'</div>'+
+      '<div class="meta"><b>感悟：</b>'+esc(x.reflection||'')+'</div>'+
+      '<div class="meta"><b>延续标题：</b>'+esc(x.title||'')+'</div>'+
+      '<div class="desc">'+esc(x.body||'')+'</div>'+
+      '<button class="btn sm ghost" style="margin-top:8px;" onclick="copyImg('+i+')">📋 复制整段图片文案</button>'+
+    '</div>').join('');
+}
+function copyImg(i){
+  const x = (state.daily.image_copywriting||[])[i]; if(!x) return;
+  const txt = (x.hook||'')+'\n\n'+(x.quote||'')+'\n\n'+(x.reflection||'')+'\n\n'+(x.title||'')+'\n'+(x.body||'');
+  navigator.clipboard.writeText(txt).then(()=>toast('已复制图片文案')).catch(()=>toast('复制失败，请手动'));
+}
+function emptyHTML(){ return '<div class="empty"><div class="big">📭</div>今日内容还在生成中，点右下角「刷新今日」试试</div>'; }
+
+/* ============ 爆款二创 ============ */
+function renderRemix(){
+  const list = (state.daily&&state.daily.remix_angles)||[];
+  if(!list.length){ $id('remixList').innerHTML = emptyHTML(); return; }
+  $id('remixList').innerHTML = list.map(x=>
+    '<div class="post">'+
+      '<div style="margin-bottom:8px;"><span class="badge">'+esc(x.type||'热点')+'</span></div>'+
+      '<div class="ttl">'+esc(x.hot||'')+'</div>'+
+      '<div class="meta"><b>改编角度：</b>'+esc(x.angle||'')+'</div>'+
+      '<div class="meta"><b>学习爆火文案：</b>'+esc(x.copywriting||'')+'</div>'+
+      '<div class="meta"><b>深度模仿：</b>'+esc(x.imitate||'')+'</div>'+
+    '</div>').join('');
+}
+
+/* ============ 内容复盘 ============ */
+function getReviews(){ return LS('mama_reviews')||[]; }
+function renderReview(){
+  const arr = getReviews();
+  $id('rvCount').textContent = arr.length;
+  if(!arr.length){ $id('reviewList').innerHTML = '<div class="empty">还没有复盘，拍完一条就记下来吧</div>'; return; }
+  $id('reviewList').innerHTML = arr.slice().reverse().map(r=>
+    '<div class="post" style="border-left-color:var(--ok);">'+
+      '<div class="ttl" style="font-size:15px;">'+esc(r.platform)+' · '+esc(r.date)+'</div>'+
+      '<div class="meta">播放 <b>'+(r.play||0)+'</b> ｜ 点赞 <b>'+(r.like||0)+'</b> ｜ 评论 <b>'+(r.comment||0)+'</b> ｜ 转发 <b>'+(r.share||0)+'</b></div>'+
+      (r.good?'<div class="meta"><b>亮点：</b>'+esc(r.good)+'</div>':'')+
+      (r.bad?'<div class="meta"><b>问题：</b>'+esc(r.bad)+'</div>':'')+
+      (r.opt?'<div class="meta"><b>优化：</b>'+esc(r.opt)+'</div>':'')+
+    '</div>').join('');
+}
+function saveReview(){
+  const r = {
+    platform:$id('rvPlatform').value, date:$id('rvDate').value||today(),
+    play:$id('rvPlay').value||0, like:$id('rvLike').value||0,
+    comment:$id('rvComment').value||0, share:$id('rvShare').value||0,
+    good:$id('rvGood').value.trim(), bad:$id('rvBad').value.trim(), opt:$id('rvOpt').value.trim()
+  };
+  if(!r.good && !r.bad && !r.opt){ toast('至少写点亮点/问题/优化'); return; }
+  const arr = getReviews(); arr.push(r); LS('mama_reviews', arr);
+  ['rvPlay','rvLike','rvComment','rvShare','rvGood','rvBad','rvOpt'].forEach(id=>$id(id).value='');
+  renderReview(); toast('复盘已保存');
+}
+
+/* ============ 备忘录 ============ */
+function getMemo(){
+  let m = LS('mama_memo');
+  if(!m){ m = [{t:'',done:false},{t:'',done:false},{t:'',done:false},{t:'',done:false},{t:'',done:false}]; LS('mama_memo',m); }
+  return m;
+}
+function renderMemo(){
+  const m = getMemo();
+  $id('memoList').innerHTML = m.map((it,i)=>
+    '<div class="item '+(it.done?'done':'')+'">'+
+      '<div class="cb" onclick="toggleMemo('+i+')">'+(it.done?'✓':'')+'</div>'+
+      '<textarea class="tx" rows="1" placeholder="记点什么…" oninput="editMemo('+i+',this.value)">'+esc(it.t)+'</textarea>'+
+      '<button class="del" onclick="delMemo('+i+')">✕</button>'+
+    '</div>').join('');
+}
+function toggleMemo(i){ const m=getMemo(); m[i].done=!m[i].done; LS('mama_memo',m); renderMemo(); }
+function editMemo(i,v){ const m=getMemo(); m[i].t=v; LS('mama_memo',m); }
+function delMemo(i){ const m=getMemo(); m.splice(i,1); LS('mama_memo',m); renderMemo(); }
+function addMemo(){ const v=$id('memoInput').value.trim(); if(!v) return; const m=getMemo(); m.push({t:v,done:false}); LS('mama_memo',m); $id('memoInput').value=''; renderMemo(); }
+
+/* ============ 速算练习 ============ */
+function getMath(){
+  const d = state.daily||{};
+  if(d.mental_math && d.mental_math.length) return d.mental_math;
+  const prob=[]; const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+  for(let i=0;i<20;i++){ const t=['+','-','*'][rnd(0,2)];
+    let a,b,ans; if(t==='+'){a=rnd(10,99);b=rnd(10,99);ans=a+b;} else if(t==='-'){a=rnd(20,99);b=rnd(10,99);if(b>a)[a,b]=[b,a];ans=a-b;} else {a=rnd(2,12);b=rnd(2,9);ans=a*b;}
+    prob.push({q:a+' '+t+' '+b+' = ?',a:ans});
+  }
+  return prob;
+}
+function renderMath(){
+  const arr = getMath(); state._math = arr; state.mathIdx = Math.min(state.mathIdx, arr.length-1);
+  showMath();
+  $id('mathProg').textContent = (state.mathIdx+1)+'/'+arr.length;
+}
+function showMath(){
+  const arr = state._math||[]; if(!arr.length) return;
+  const it = arr[state.mathIdx];
+  $id('mathQ').textContent = it.q;
+  $id('mathA').value=''; $id('mathR').textContent='';
+}
+function checkMath(){
+  const arr = state._math||[]; const it = arr[state.mathIdx]; if(!it) return;
+  const v = parseFloat($id('mathA').value);
+  if(isNaN(v)){ toast('先写答案'); return; }
+  if(Math.abs(v-it.a)<1e-6){ $id('mathR').textContent='✅ 正确：'+it.a; state.mathRight++; }
+  else { $id('mathR').textContent='❌ 正确答案：'+it.a; state.mathWrong++; }
+  $id('mathScore').textContent = '对 '+state.mathRight+' ／ 错 '+state.mathWrong;
+}
+function mathNext(){ if(state.mathIdx < (state._math||[]).length-1){ state.mathIdx++; showMath(); $id('mathProg').textContent=(state.mathIdx+1)+'/'+(state._math||[]).length; } }
+function mathPrev(){ if(state.mathIdx>0){ state.mathIdx--; showMath(); $id('mathProg').textContent=(state.mathIdx+1)+'/'+(state._math||[]).length; } }
+function reloadMath(){ state.mathIdx=0; state.mathRight=0; state.mathWrong=0; renderMath(); toast('已换一批'); }
+
+/* ============ 英语练习 ============ */
+const EN_PLAN = [
+  '第1-5天：26个字母 + 基础发音，先敢开口',
+  '第6-10天：50个最高频词（我/你/吃/喝/妈妈/宝宝…）',
+  '第11-15天：主谓宾短句，每天 5 句跟读',
+  '第16-20天：日常场景词（起床/吃饭/睡觉/超市）',
+  '第21-25天：疑问句 + 简单对话',
+  '第26-30天：影子跟读新闻/儿歌，模仿语音语调'
+];
+function renderEnglish(){
+  const dayNum = Math.floor((Date.now()-Date.parse('2026-01-01'))/86400000) % 30;
+  const phase = Math.min(5, Math.floor(dayNum/5));
+  $id('enPlan').innerHTML = EN_PLAN.map((p,i)=>(i===phase?'👉 ':'　　')+p).join('<br>');
+  $id('enDay').textContent = '今日建议：'+EN_PLAN[phase];
+  const en = (state.daily&&state.daily.english)||{};
+  const words = en.words||[];
+  $id('enWords').innerHTML = words.length? words.map(w=>
+    '<div class="word">'+
+      '<div style="flex:1;">'+
+        '<div class="en">'+esc(w.word)+'</div>'+
+        '<div class="ph">'+esc(w.phonetic||'')+'</div>'+
+        '<div class="mn">'+esc(w.meaning||'')+'</div>'+
+        '<div class="ex">'+esc(w.example||'')+'</div>'+
+      '</div>'+
+      '<button class="spk" onclick="speak(\''+esc(w.word)+'\',\'en-US\',0.9)">🔊</button>'+
+      '<button class="spk" onclick="speak(\''+esc(w.example||w.word)+'\',\'en-US\',0.85)">🗣️</button>'+
+    '</div>').join('') : '<div class="empty">今日单词生成中…</div>';
+  $id('enGrammar').textContent = en.grammar || '主谓宾：我(I) 爱(love) 宝宝(baby)。';
+  const sh = en.shadow || 'I am a happy mom and I love my baby.';
+  window._shadow = sh;
+  $id('shadowText').innerHTML = sh.split(/\s+/).map((w,i)=>'<span id="sw'+i+'">'+esc(w)+'</span>').join(' ');
+}
+function speak(text, lang, rate){
+  if(!('speechSynthesis' in window)){ toast('当前浏览器不支持语音'); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang||'en-US'; u.rate = rate||0.9; u.pitch=1;
+    speechSynthesis.speak(u);
+  }catch(e){ toast('语音播放失败'); }
+}
+function shadowPlay(){
+  const words = (window._shadow||'').split(/\s+/);
+  let i = 0;
+  speechSynthesis.cancel();
+  function next(){
+    if(i>=words.length) return;
+    const sp = $id('sw'+i); if(sp) sp.classList.add('hl');
+    const u = new SpeechSynthesisUtterance(words[i]);
+    u.lang='en-US'; u.rate=0.75;
+    u.onend = ()=>{ if(sp) sp.classList.remove('hl'); i++; next(); };
+    speechSynthesis.speak(u);
+  }
+  next();
+}
+let mediaRec=null, recChunks=[];
+function shadowRecord(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){ toast('此设备不支持录音'); return; }
+  if(mediaRec && mediaRec.state==='recording'){
+    mediaRec.stop(); $id('recBtn').textContent='● 录我的'; return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    mediaRec = new MediaRecorder(stream);
+    recChunks=[];
+    mediaRec.ondataavailable = e=>{ if(e.data.size) recChunks.push(e.data); };
+    mediaRec.onstop = ()=>{
+      state.recBlob = new Blob(recChunks,{type:'audio/webm'});
+      $id('pbBtn').style.display='inline-block';
+      toast('录好了，点「听我的」对比');
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mediaRec.start();
+    $id('recBtn').textContent='■ 停止';
+  }).catch(()=>toast('需要麦克风权限'));
+}
+function shadowPlayback(){
+  if(!state.recBlob) return;
+  const a = new Audio(URL.createObjectURL(state.recBlob));
+  a.play();
+}
+function enSearch(eng){
+  const q = $id('enSearch').value.trim(); if(!q){ toast('先输入要搜的内容'); return; }
+  const e = encodeURIComponent(q);
+  const map = {
+    youglish:'https://youglish.com/search/'+e+'/english',
+    youtube:'https://www.youtube.com/results?search_query='+e,
+    bing:'https://www.bing.com/videos/search?q='+e
+  };
+  window.open(map[eng],'_blank');
+}
+
+/* ============ 刷新 ============ */
+function refresh(){ loadDaily(true); toast('正在刷新今日内容…'); }
+
+/* ============ 初始化 ============ */
+(function init(){
+  $id('rvDate').value = today();
+  loadDaily(false);
+})();
+</script>
+</body>
+</html>
