@@ -4,6 +4,7 @@
 宝妈勇闯自媒体 - 每日创作内容生成器
 - 抓取抖音/微博/知乎/头条/60s 热榜
 - 调用 DeepSeek 改写 -> 10 选题灵感 + 10 二创角度 + 10 图片文案 + 英语(单词/语法/跟读)
+- 可选读取用户维护的 sources.json（金句库 / 通透句库 / 人名日报）做事实追踪与真金句
 - 本地生成速算练习题
 - 推送至公开 GitHub Gist（网页默认读取）
 
@@ -86,15 +87,21 @@ def fetch_hotlists():
 # ---------------- 2. 调用大模型 ----------------
 SYSTEM = (
     "你是一位深耕「宝妈勇闯自媒体」赛道的爆款内容策划与文案高手，"
-    "非常熟悉抖音上 5000-50000 粉丝量级的宝妈类账号写法，尤其是类似 ayanddq、88007612422 这类账号："
-    "擅长把明星发言、热门歌曲、社会热点改写成宝妈视角的金句图文；"
+    "非常熟悉抖音上 5000-50000 粉丝量级的宝妈类账号写法，尤其是类似 ayanddq、88007612422 这类账号。"
+    "你的服务对象是一位明确的宝妈人设："
+    "【人设】她想赚钱、努力活着、有正能量；不是逆袭爽文人设，而是真实、扎实、在带娃间隙认真做自媒体的普通妈妈；"
+    "她做自媒体是为了给孩子更好的生活、为了自己有底气、为了活得更体面。"
+    "【照片现实】她每天的配图以孩子为主角——户外奔跑、背影、侧脸、少量母子合照；极少纯成人独照。"
+    "因此文案必须『妈妈口吻看着孩子写』：第一人称『我（宝妈）』视角，主角多为孩子；"
+    "通透句要『借着孩子说妈妈自己的坚持』，自然落到『为了孩子 / 为了搞钱 / 为了活得更体面』上；"
+    "严禁脱离画面的孤单独白式通透（那种话配孩子照片会很违和）。"
     "文案要有『通透感』『金句感』『情绪共鸣』，像一位真诚、有阅历的宝妈在跟朋友掏心窝子；"
     "善用排比、反问、对比，敢于谈钱、谈低谷、谈坚持、谈自我成长；"
     "你必须且只能输出一个 JSON 对象，不要任何解释、不要 markdown 代码块、不要多余文字。"
 )
 
 
-def build_user_prompt(hot):
+def build_user_prompt(hot, sources=None):
     titles = []
     for name, items in hot.items():
         for it in items:
@@ -104,18 +111,36 @@ def build_user_prompt(hot):
     titles = titles[:90]
     titles_text = "\n".join(f"- {t}" for t in titles)
 
+    # 真实金句库 / 通透句库（用户维护，制造真金句与事实追踪）
+    src_block = ""
+    if sources:
+        jinju = sources.get("金句库") or sources.get("jinju") or []
+        tongtou = sources.get("通透句库") or sources.get("tongtou") or []
+        ribao = sources.get("人名日报") or sources.get("mingren_ribao") or []
+        def fmt(name, arr, n=4):
+            arr = list(arr or [])[:n]
+            if not arr:
+                return ""
+            return f"【{name}样例】\n" + "\n".join(f"- {x}" for x in arr) + "\n"
+        block = fmt("金句库", jinju) + fmt("通透句库", tongtou) + fmt("人名日报", ribao)
+        if block:
+            src_block = (
+                "\n以下是用户提供的真实文案来源库（请优先化用其语言风格与通透感，可改写但保持原味；"
+                "并据此把对应文案的 hot_source 标注为『金句库 / 通透句库 / 人名日报』）：\n" + block
+            )
+
     return f"""今天是 {datetime.date.today().isoformat()}。以下是今日热榜 / 新闻（来源：抖音、微博、知乎、头条、60s 早报）：
 
 {titles_text}
-
-请基于以上热点，产出一份 JSON，结构必须如下（数组长度务必准确，不得省略）：
+{src_block}
+请基于以上热点（并参考上方来源库），产出一份 JSON，结构必须如下（数组长度务必准确，不得省略）：
 
 {{
   "topic_inspirations": [   // 10 条：宝妈勇闯自媒体-每日灵感 / 人生感悟
     {{
-      "title": "标题，16-24 字（含标点），带钩子感，像爆款封面标题",
-      "tag": "标签，如 #宝妈逆袭 #带娃搞钱 #婚姻真相 #女性成长",
-      "desc": "说明，关联宝妈勇闯自媒体的真实痛点或爽点，80-140 字，有细节、有共鸣",
+      "title": "标题，16-24 字（含标点），带钩子感，像爆款封面标题；紧扣人设：想赚钱、努力活着、有正能量",
+      "tag": "标签，如 #宝妈逆袭 #带娃搞钱 #女性成长 #正能量",
+      "desc": "说明，关联宝妈勇闯自媒体的真实痛点或爽点，80-140 字，有细节、有共鸣；点出这件事和『搞钱/努力活着/给孩子更好生活』的关系",
       "platform": "douyin 或 bili 或 xhs（该选题最合适的主推平台）",
       "type": "热点二创 / 搞钱结果 / 情绪共鸣 / 成长记录（四选一，必须准确）"
     }}
@@ -123,22 +148,22 @@ def build_user_prompt(hot):
   "remix_angles": [   // 10 条：爆款热点 / 新闻 / 歌曲 / 明星发言 的二创
     {{
       "hot": "挑选的热点原文 / 标题 / 明星发言 / 歌词，必须真实可引用",
-      "type": "热点 或 新闻 或 歌曲 或 明星发言",
-      "angle": "改编角度：如何与宝妈自媒体关联、能怎么拍，60-120 字，具体可操作",
+      "type": "热点 或 新闻 或 歌曲 或 明星发言（来源要真实可追踪）",
+      "angle": "改编角度：如何与宝妈自媒体关联、能怎么拍，60-120 字，具体可操作；主角多为孩子，妈妈是记录者与 narrator",
       "copywriting": "学习爆火文案：拆解它为什么火、用了什么情绪/结构/金句，40-80 字",
       "imitate": "深度模仿：给出 2-3 个可直接套用的开头句式 / 文案框架，用 | 分隔"
     }}
   ],
   "image_copywriting": [   // 10 条：用于图片上的文字（重点！）
     {{
-      "hook": "第一句 14-20 字（含标点），大标题钩子。风格参考：'原来当妈后，人真的会脱胎换骨' / '谁懂啊？我的娃靠自己赚到了钱' / '稀里糊涂挣到钱，真的太意外了' / '真正厉害的人，都跳过情绪行动'。用身份认同、反差、悬念、数字、热点名",
-      "hot_source": "这条文案借用的热点/明星/歌曲/名言来源，10-25 字，如'周星驰《功夫女足》'、'杨紫获奖感言'、'孙颖莎夺冠发言'、'热门歌曲《吹吹山顶的风》'",
-      "quote": "金句 = 原文：直接给出可引用的真实原句（热点原话、歌词、名言或网友神评），15-40 字，不要加 '原文：' 前缀，必须真实",
-      "interpretation": "宝妈视角的深度解读，4-8 行短句，80-150 字。要求：像真人宝妈口播，用排比/反问/对比，写出通透感；要敢于谈钱、谈低谷、谈坚持、谈自我成长；每行 10-20 字，整体有节奏感",
-      "reflection": "感悟，40-80 字，扎心、有共鸣，让普通妈妈觉得'被说中了'",
+      "hook": "第一句 12-15 字（含标点），大标题钩子。风格参考：'原来当妈后，人脱胎换骨' / '谁懂？娃靠自己赚到钱' / '稀里糊涂挣到钱，太意外' / '真正厉害的人跳过情绪'。用身份认同、反差、悬念、数字、热点名，短促有力",
+      "hot_source": "这条文案借用的来源，必须且只能是以下五类之一并写具体：'人名日报金句' / '通透句库' / '抖音热搜' / '明星发言' / '热门歌曲'。如：'人名日报金句·关于陪伴'、'抖音热搜·XX事件'、'热门歌曲《吹吹山顶的风》'、'明星发言·周星驰'",
+      "quote": "金句 = 原文：直接给出可引用的真实原句（热点原话、歌词、名言、人名日报金句或网友神评），15-40 字；不要加 '原文：' 前缀；若化用了来源库则标注对应来源",
+      "interpretation": "宝妈视角、看着孩子写的深度解读，4-8 行短句，80-150 字。要求：第一人称『我（宝妈）』口吻、主角多为孩子；把金句自然落到『为了孩子 / 为了搞钱 / 为了活得更体面』上；用排比/反问/对比写出通透感，拒绝孤单独白式鸡汤",
+      "reflection": "感悟，40-80 字，扎心、有共鸣，让普通妈妈觉得『被说中了』；紧扣努力活着、正能量",
       "cta": "行动号召，10-20 字，如'去拍吧，下一个火的就是你' / '坚持下去，天亮后会很美' / '别小看自己，你也值得被看见'",
       "title": "图片下方延续性标题，15-20 字，带钩子",
-      "body": "图片下方延续性正文，关联宝妈勇闯自媒体，60-120 字，有金句、有洞察"
+      "body": "图片下方延续性正文，关联宝妈勇闯自媒体与搞钱/努力活着，60-120 字，有金句、有洞察"
     }}
   ],
   "english": {{
@@ -151,15 +176,17 @@ def build_user_prompt(hot):
 }}
 
 写作要求（重点）：
-1. 全部内容紧扣「宝妈勇闯自媒体」赛道，让普通妈妈有共鸣、想点击、想转发。
-2. image_copywriting 要模仿目标账号风格：顶部大标题抓眼，中间金句+通透解读，底部感悟+行动号召；整体像一位真实宝妈在分享心得。
-3. image_copywriting 的 hook 尽量写到 14-20 字（含标点），可借助热点名/数字/反问/反差制造钩子。
-4. image_copywriting 的 quote 字段直接给原文句子，不要带 '原文：' 前缀；必须是真实可引用的原话。
-5. image_copywriting 的 interpretation 要多用短句、排比、反问，写出『通透感』和『扎心感』，拒绝鸡汤空话。
-6. topic_inspirations 的 type 必须准确四选一，desc 要有具体场景或细节，不要泛泛而谈。
-7. remix_angles 的 imitate 要给出真正能直接套用的 2-3 个开头句式，用 | 分隔。
-8. 所有字段值必须是合法 JSON 字符串；如果需要换行（如 interpretation 的多行解读），请使用 \\n 转义，不要输出真实换行符。
-9. 不要省略任何字段，不要输出 markdown 代码块，只输出 JSON 对象。"""
+1. 人设贯穿始终：她是想赚钱、努力活着、有正能量的宝妈；做自媒体是为了孩子更好的生活、自己有底气。文案要真实、扎实，不浮夸。
+2. 图文人称匹配：图片以孩子为主角（户外/背影/侧脸/少量母子合照），所以文案用『妈妈看着孩子』的第一人称口吻；通透句要借着孩子说妈妈自己的坚持，严禁脱离画面的成人独白式通透（那种话配孩子照片很违和）。
+3. image_copywriting 顶钩 + 金句 + 通透解读 + 感悟 + 行动号召；整体像真实宝妈在分享心得。
+4. image_copywriting 的 hook 尽量 12-15 字（含标点），短促有力，可用热点名/数字/反问/反差制造钩子。
+5. image_copywriting 的 quote 直接给原文句子，不要带 '原文：' 前缀；必须真实可引用。
+6. image_copywriting 的 interpretation 必须串起『来源 → 宝妈生活 → 自媒体努力/搞钱 → 正能量』，并用孩子为主角来写。
+7. hot_source 必须严格是五类之一且具体（人名日报金句 / 通透句库 / 抖音热搜 / 明星发言 / 热门歌曲）。
+8. topic_inspirations 的 type 必须准确四选一，desc 要指出与『搞钱/努力活着/给孩子更好生活』的关系，不要泛泛而谈。
+9. remix_angles 的 imitate 给出真正能直接套用的 2-3 个开头句式，用 | 分隔。
+10. 所有字段值必须是合法 JSON 字符串；如需换行（如 interpretation 多行解读）请用 \\n 转义，不要输出真实换行符。
+11. 不要省略任何字段，不要输出 markdown 代码块，只输出 JSON 对象。"""
 
 
 def chat(system, user, temperature=0.7):
@@ -208,7 +235,7 @@ def cn_len(s):
     return len(re.sub(r"\s", "", s or ""))
 
 
-# ---------------- 钩子字数强制合规（程序化兜底，保证 14-20 字）----------------
+# ---------------- 钩子字数强制合规（程序化兜底，保证 12-15 字）----------------
 FILLERS = [
     "，你中了几条",          # 6
     "，你们也这样吗",        # 7
@@ -222,6 +249,15 @@ FILLERS = [
     "，只有当过妈的才懂",    # 9
 ]
 
+SHORT_FILLERS = [
+    "你中几条",      # 4
+    "我也一样",      # 4
+    "真的戳中我",    # 5
+    "当妈才懂",      # 4
+    "别不承认",      # 4
+    "太真实了",      # 4
+]
+
 
 def _clean(s):
     return re.sub(r"\s", "", s or "")
@@ -229,18 +265,23 @@ def _clean(s):
 
 def enforce_hook(hook, idx):
     s = _clean(hook)
-    if 14 <= len(s) <= 20:
+    if 12 <= len(s) <= 15:
         return hook
-    if len(s) < 14:
+    if len(s) < 12:
         base = re.sub(r"[，。！？、\s]+$", "", hook)
-        for k in range(len(FILLERS)):
-            suf = FILLERS[(idx + k) % len(FILLERS)]
-            if 14 <= len(s) + len(_clean(suf)) <= 20:
-                return base + suf
-        # 兜底
-        return _clean(hook + FILLERS[idx % len(FILLERS)])[:20]
-    # 超过 20 字：保留更有力的尾部
-    return s[-20:]
+        # 优先用短尾，保证 base+尾 落在 12-15
+        for bank in (FILLERS, SHORT_FILLERS):
+            for k in range(len(bank)):
+                suf = bank[(idx + k) % len(bank)]
+                if 12 <= len(s) + len(_clean(suf)) <= 15:
+                    return base + suf
+        # 兜底：拼接后截断到 15；若仍不足 12，则重复短尾补齐
+        cand = _clean(hook + FILLERS[idx % len(FILLERS)])[:15]
+        while len(cand) < 12:
+            cand += SHORT_FILLERS[(idx + len(cand)) % len(SHORT_FILLERS)]
+        return cand[:15]
+    # 超过 15 字：保留更有力的尾部
+    return s[-15:]
 
 
 def enforce_hooks(items):
@@ -270,7 +311,7 @@ TAIL_POOL = {
     "cta": ["，现在就出发", "，去拍吧，别等了", "，你也可以闪闪发光"],
     "copywriting": [
         "。情绪真实、共鸣强烈、金句密集，是它破圈的关键。",
-        "。它用宝妈视角把热点翻译成了生活，让人一看就觉得'说中我了'。",
+        "。它用宝妈视角把热点翻译成了生活，让人一看就觉得『说中我了』。",
     ],
     "angle": [
         "。把热点放进宝妈的真实生活里，让观众觉得说的就是自己。",
@@ -315,7 +356,24 @@ def enforce_text(items, field, min_len, max_len):
     return items
 
 
-# ---------------- 3. 兜底与补齐 ----------------
+# ---------------- 3. 用户维护的「真实文案来源库」 ----------------
+def load_sources():
+    """读取仓库根目录的 sources.json（用户维护：金句库 / 通透句库 / 人名日报）。
+    不存在或解析失败则返回 None，由调用方按『AI 自行生成』处理。"""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        if isinstance(d, dict):
+            return d
+    except Exception as e:
+        log(f"sources.json 读取失败，忽略: {e}")
+    return None
+
+
+# ---------------- 3.5 兜底与补齐 ----------------
 def pad(arr, n, factory):
     arr = list(arr or [])
     while len(arr) < n:
@@ -342,7 +400,7 @@ def fallback_ai(hot):
             "hot": fb,
             "type": "热点",
             "angle": "用宝妈视角切入，讲自己带娃时的同类经历。把热点放进真实生活里，让观众觉得说的就是自己。",
-            "copywriting": "真实 + 情绪共鸣 + 金句密集，是它破圈的关键。宝妈赛道最吃的就是'被说中'的感觉。",
+            "copywriting": "真实 + 共鸣 + 金句密集，是它破圈的关键。宝妈赛道最吃的就是『被说中』的感觉。",
             "imitate": "最近大家都聊__，我当妈后也深有体会…… | 谁懂啊？__这件事，真的只有宝妈才懂。",
         }
 
@@ -449,16 +507,22 @@ def main():
     log("开始抓取热榜")
     hot = fetch_hotlists()
 
+    # 读取用户维护的「真实文案来源库」（金句库 / 通透句库 / 人名日报）
+    sources = load_sources()
+    if sources:
+        n = sum(len(v) for v in sources.values() if isinstance(v, list))
+        log(f"已载入文案来源库：共 {n} 条")
+
     log("调用 DeepSeek 生成内容")
     ai = None
     try:
-        raw = chat(SYSTEM, build_user_prompt(hot))
+        raw = chat(SYSTEM, build_user_prompt(hot, sources=sources))
         ai = extract_json(raw)
         log("AI 返回解析成功")
     except Exception as e:
         log(f"AI 首次调用/解析失败: {e}，尝试重试一次")
         try:
-            raw = chat(SYSTEM, build_user_prompt(hot), temperature=0.3)
+            raw = chat(SYSTEM, build_user_prompt(hot, sources=sources), temperature=0.3)
             ai = extract_json(raw)
             log("AI 重试解析成功")
         except Exception as e2:
@@ -527,7 +591,7 @@ def main():
     url = push_gist(out)
     log("Gist 已更新 ->", url)
     log(f"产出统计: 灵感 {len(topic)} / 二创 {len(remix)} / 图片文案 {len(img)} / 速算 {len(math)} / 单词 {len(eng['words'])}")
-    bad_hook = [i for i, x in enumerate(img) if not (14 <= cn_len(x.get("hook", "")) <= 20)]
+    bad_hook = [i for i, x in enumerate(img) if not (12 <= cn_len(x.get("hook", "")) <= 15)]
     log("钩子字数: " + " / ".join(f"{i+1}.{cn_len(x['hook'])}" for i, x in enumerate(img)))
     log(f"钩子合格 {len(img)-len(bad_hook)}/{len(img)}" + (f"，需关注 {bad_hook}" if bad_hook else "，全部达标"))
 
