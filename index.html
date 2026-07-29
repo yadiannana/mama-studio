@@ -134,6 +134,8 @@
   .img-section .quote{padding:10px 12px; background:var(--pink-soft); border-radius:10px; border-left:3px solid var(--pink); font-weight:600; color:var(--ink);}
   .img-cta{font-size:15px; font-weight:800; color:var(--pink-deep); text-align:center; padding:11px; background:#fff0f5; border-radius:12px; margin:12px 0; border:1px dashed var(--pink);}
   .img-cont{border-top:1px dashed var(--line); padding-top:12px; margin-top:12px;}
+  .img-onpic{background:#fff; border:2px dashed var(--pink); border-radius:12px; padding:12px; font-size:15px; line-height:1.95; font-weight:600; color:var(--ink);}
+  .img-hint{font-size:11px; color:var(--muted); margin-top:6px; line-height:1.6;}
   .wc{font-size:11px; color:#b89ba6; font-weight:500; white-space:nowrap; margin-left:6px;}
   .tpl-item{background:#fff7fa; border:1px solid #ffe9f1; border-radius:10px; padding:9px 11px; margin-bottom:7px; font-size:13px; line-height:1.6; color:#4a3a42;}
 </style>
@@ -325,6 +327,7 @@ function LS(k,v){ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'
 function toast(m){ const t = $id('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1600); }
 function today(){ return new Date().toISOString().slice(0,10); }
 function cnLen(s){ return (s||'').replace(/\s/g,'').length; }
+function cnSents(s){ return (s||'').split(/(?<=。|！|？|!|\?)/).filter(p=>p.trim()); }
 
 /* ============ 深链唤起 App ============ */
 const PLAT = {
@@ -482,25 +485,19 @@ function renderImg(){
   if(!list.length){ $id('imgList').innerHTML = emptyHTML(); return; }
   $id('imgList').innerHTML = list.map((x,i)=>{
     const hook = x.hook||'';
-    const interpretation = x.interpretation||'';
-    const reflection = x.reflection||'';
-    const body = x.body||'';
-    const quote = x.quote||'';
-    const cta = x.cta||'';
+    const imgText = x.img_text||'';
+    const bodyLong = x.body_long||'';
+    const bodyShort = x.body_short||'';
     const hotSource = x.hot_source||'';
-    const title = x.title||'';
     return '<div class="post img-card">'+
       '<div class="img-hook"><span>'+esc(hook)+'</span><span class="wc">'+cnLen(hook)+'字</span></div>'+
       (hotSource?'<div class="img-source">🔥 来源：'+esc(hotSource)+'</div>':'')+
-      '<div class="img-section"><div class="lab">金句原文</div><div class="txt quote">'+esc(quote)+'</div></div>'+
-      '<div class="img-section"><div class="lab">通透解读 <span class="wc">'+cnLen(interpretation)+'字</span></div><div class="txt">'+esc(interpretation)+'</div></div>'+
-      '<div class="img-section"><div class="lab">宝妈感悟 <span class="wc">'+cnLen(reflection)+'字</span></div><div class="txt">'+esc(reflection)+'</div></div>'+
-      (cta?'<div class="img-cta">'+esc(cta)+'</div>':'')+
+      '<div class="img-section"><div class="lab">📌 图上正文（标题＋原文＋感悟 合并，直接放图上）<span class="wc">'+cnLen(imgText)+'字</span></div><div class="txt img-onpic">'+esc(imgText)+'</div><div class="img-hint">放图位置：图片上半部留白处，或衣服/背景空白处；图片只够放这一块，长版短版用作图文正文（见下）。</div></div>'+
       '<div class="img-cont">'+
-        '<div class="lab">延续标题</div>'+
-        '<div style="font-weight:700; margin-bottom:6px;">'+esc(title)+'</div>'+
-        '<div class="lab">延续正文 <span class="wc">'+cnLen(body)+'字</span></div>'+
-        '<div class="txt">'+esc(body)+'</div>'+
+        '<div class="lab">延展正文 · 长版（用作图文描述）<span class="wc">'+cnSents(bodyLong).length+'句</span></div>'+
+        '<div class="txt">'+esc(bodyLong)+'</div>'+
+        '<div class="lab" style="margin-top:10px;">延展正文 · 短版（用作图文描述）<span class="wc">'+cnSents(bodyShort).length+'句</span></div>'+
+        '<div class="txt" style="background:var(--pink-soft);">'+esc(bodyShort)+'</div>'+
       '</div>'+
       '<button class="btn sm ghost" style="margin-top:12px;" onclick="copyImg('+i+')">📋 复制整段图片文案</button>'+
     '</div>';
@@ -509,19 +506,16 @@ function renderImg(){
 function copyImg(i){
   const x = (state.daily.image_copywriting||[])[i]; if(!x) return;
   const parts = [
-    x.hook||'',
+    '【勾子】'+(x.hook||''),
     '',
-    '【金句原文】'+(x.quote||''),
+    '【图上正文 · 直接放图上（'+cnLen(x.img_text||'')+'字）】',
+    (x.img_text||''),
     '',
-    '【通透解读】'+(x.interpretation||''),
+    '— — — — — — — —',
     '',
-    '【宝妈感悟】'+(x.reflection||''),
+    '【延展正文 · 长版】'+(x.body_long||''),
     '',
-    '【行动号召】'+(x.cta||''),
-    '',
-    '【延续标题】'+(x.title||''),
-    '',
-    '【延续正文】'+(x.body||'')
+    '【延展正文 · 短版】'+(x.body_short||'')
   ];
   navigator.clipboard.writeText(parts.join('\n')).then(()=>toast('已复制图片文案')).catch(()=>toast('复制失败，请手动'));
 }
