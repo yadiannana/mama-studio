@@ -133,6 +133,9 @@ def build_user_prompt(hot, sources=None):
             ("角度库", "角度库"),
             ("阿圆话术", "阿圆话术（你本人收集的爆款语气）"),
             ("阿圆钩子", "阿圆钩子（你本人收集的爆款标题框架）"),
+            ("有效仿写", "有效仿写（你本人收集的爆款仿写标杆样本）"),
+            ("扎心金句", "扎心金句（你本人收集的扎心排比/对比金句）"),
+            ("话题标签", "话题标签（你本人收集的爆款话题标签）"),
         ]
 
         def fmt(label, arr, n=4):
@@ -212,7 +215,9 @@ def build_user_prompt(hot, sources=None):
 8. 严禁惨兮兮、自怜、卖惨、哭、崩溃、心碎、心酸、委屈、嫌弃、抛弃等任何卖惨/自怜类词汇；所有痛点必须转化为力量感、选择感、成长感和具体方法，让读者觉得『被说中』但更有劲，不是更丧。程序会硬性剔除上述词，务必从根上不写。
 9. 所有字段值必须是合法 JSON 字符串，如需换行（如 quote/reflection/正文多句）请用 \\n 转义，不要输出真实换行符。
 10. 不要遗漏任何字段，不要输出 markdown 代码块，只输出 JSON 对象。
-11. 【重要事实前提】这位宝妈目前【还没有通过自媒体赚到一分钱】，但她【赚钱的欲望非常强烈】，正在学习、搭建、坚持。因此文案中【严禁编造「已赚到广告费 / 已有稳定收入 / 账户余额变多 / 挣了X元」等虚假收入事实】；可以写【想赚、要搞钱、在学、在坚持、离目标更近、还没赚到但一定要赚到】的真实状态与强烈渴望。严禁出现『卡里有钱 / 兜里有钱 / 卡里余额 / 你挣的每一分钱』这类『现在就拥有财富』的表述，一律改为『想填满的卡 / 心里有底气 / 在搞钱 / 还没赚到第一笔』的渴望向表述。"""
+11. 【重要事实前提】这位宝妈目前【还没有通过自媒体赚到一分钱】，但她【赚钱的欲望非常强烈】，正在学习、搭建、坚持。因此文案中【严禁编造「已赚到广告费 / 已有稳定收入 / 账户余额变多 / 挣了X元」等虚假收入事实】；可以写【想赚、要搞钱、在学、在坚持、离目标更近、还没赚到但一定要赚到】的真实状态与强烈渴望。严禁出现『卡里有钱 / 兜里有钱 / 卡里余额 / 你挣的每一分钱』这类『现在就拥有财富』的表述，一律改为『想填满的卡 / 心里有底气 / 在搞钱 / 还没赚到第一笔』的渴望向表述。
+12. 图片文案（排版与说话感觉）要求（重要）：image_copywriting 的 10 条里，至少 5 条必须采用「标题（钩子）+ 原句/金句（quote）+ 宝妈感悟（reflection）合并成图上正文」的爆款排版与语气（参考来源库「有效仿写」标杆样本：扎心年龄排比、跟谁混对比、通透感悟——这些都是「说话的感觉」，不是固定题材）。关键点：① 话题跟着当天内容走——优先用当日的【明星发言 / 人名日报金句 / 扎心金句 / 热门歌曲 / 网友神评 / 热搜话题】作为原句与素材，不要每篇都写同一个人或同一个事件，每天题材本就不同；② quote 必须直接引用真实来源（书摘/明星发言/金句/热搜原句），并在 hot_source 标对应类别；③ reflection 落到宝妈做自媒体（刷推荐页、赢曝光、搞钱底气、长期主义），用「阿圆话术」语气；④ img_text 严格按「标题+原句+感悟」合并成每句 12-16 字连贯正文（个别整句金句可到 21-22 字），并给出放图位置提示（图片上半部留白、衣服处，只放这一块）；⑤ body_long 必须 10 句、body_short 必须 5-6 句；⑥ 结尾带话题标签（参考「话题标签」，含 #宝妈勇闯自媒体 等）。其余条目也尽量沿用此基调。
+"""
 
 
 def chat(system, user, temperature=0.7):
@@ -577,18 +582,20 @@ TAIL_POOL = {
 }
 
 
-def enforce_text(items, field, min_len, max_len):
+def enforce_text(items, field, min_len, max_len, pad=True):
     pool = TAIL_POOL.get(field, ["。坚持下来，时间会给你答案。"])
     n = max(1, len(pool))
     for idx, x in enumerate(items):
         s = x.get(field, "")
         L = cn_len(s)
         # 太短：从池子里按序号轮换追补，直到达标或耗尽，避免所有条目尾巴雷同
+        # （pad=False 时跳過补写，保留 AI 给出的短钩子/标题，避免被金句尾巴截断）
         tries = 0
-        while L < min_len and tries < n:
-            s = s + pool[(idx + tries) % n]
-            L = cn_len(s)
-            tries += 1
+        if pad:
+            while L < min_len and tries < n:
+                s = s + pool[(idx + tries) % n]
+                L = cn_len(s)
+                tries += 1
         # 太长：截断并尽量保持句尾完整
         if L > max_len:
             cleaned = _clean(s)
@@ -600,8 +607,8 @@ def enforce_text(items, field, min_len, max_len):
                     break
             s = trunc
             L = cn_len(s)
-        # 若耗尽仍短，用最长兜底再补一次（之后必要时截断）
-        if L < min_len:
+        # 若耗尽仍短，用最长兜底再补一次（pad=True 时；pad=False 不强补，允许短钩子）
+        if pad and L < min_len:
             s = s + pool[-1]
             if cn_len(s) > max_len:
                 s = _clean(s)[:max_len]
@@ -939,11 +946,12 @@ def main():
     # 先清洗标题里的惨词，再组装图上正文，避免惨词漏进 img_text
     for x in img:
         x["title"] = clean_sad_inline(x.get("title", ""))
-    img = enforce_img_text(img)              # 组装图上正文：≤10句，每句12-16字，连贯一段
+    img = enforce_text(img, "title", 8, 16, pad=False)   # 标题不补写，保留短钩子；仅过长才截断
+    img = enforce_img_text(img)              # 组装图上正文，≤10句，每句12-16字，连贯一段
     # 双保险：图上正文再过一遍惨词内联清洗
     for x in img:
         x["img_text"] = clean_sad_inline(x.get("img_text", ""))
-    img = enforce_text(img, "title", 11, 16)        # 标题 12-18 字（带钩子；先去惨词再校字数）
+    img = enforce_text(img, "title", 8, 16, pad=False)   # 标题不补写，保留短钩子（双保险，幂等）
 
     remix = enforce_text(remix, "angle", 60, 120)
     remix = enforce_text(remix, "copywriting", 40, 80)
@@ -1004,12 +1012,18 @@ def main():
             bad = [i for i, x in enumerate(img) if not (lo <= len(cn_sents(x.get(field, ""))) <= hi)]
         log(f"{label}: 合规 {len(img)-len(bad)}/{len(img)}" + (f"，需关注 {bad}" if bad else "，全部达标"))
     # 图上正文新增约束：每句 12-16 字
+    total_lines = sum(len([s for s in x.get("img_text", "").split("\n") if s.strip()]) for x in img)
     bad_sents = []
     for i, x in enumerate(img):
-        for j, st in enumerate([s for s in x.get("img_text", "").split("\n") if s.strip()]):
-            if not (12 <= cn_len(st) <= 20):
+        lines = [s for s in x.get("img_text", "").split("\n") if s.strip()]
+        for j, st in enumerate(lines):
+            if j == 0:
+                ok = 8 <= cn_len(st) <= 16     # 首行=标题/钩子，可更短促
+            else:
+                ok = 11 <= cn_len(st) <= 22   # 正文行（原句+感悟），整句金句可到21-22
+            if not ok:
                 bad_sents.append((i+1, j+1, cn_len(st)))
-    log(f"图上正文每句12-20字(12-16左右，个别整句19-20): 合规 {len(img)*len(cn_sents(img[0].get('img_text','')))-len(bad_sents) if img else 0}/{sum(len(cn_sents(x.get('img_text',''))) for x in img)}" + (f"，需关注 {bad_sents}" if bad_sents else "，全部达标"))
+    log(f"图上正文字数(首行标题8-16、正文行11-22、整句金句可到21-22): 合规 {total_lines-len(bad_sents)}/{total_lines}" + (f"，需关注 {bad_sents}" if bad_sents else "，全部达标"))
 
 
 if __name__ == "__main__":

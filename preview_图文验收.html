@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ff4d8d">
+<title>宝妈创作台 · 移动端工作台</title>
+<style>
+  :root{
+    --pink:#ff4d8d; --pink-deep:#ff2e74; --pink-soft:#ffe3ee; --pink-bg:#fff5f8;
+    --ink:#3a2b32; --muted:#9a8b92; --card:#ffffff; --line:#ffe0ea; --ok:#27c08a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:#f1e7ec; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink);}
+  body{display:flex; justify-content:center;}
+  .phone{width:100%; max-width:480px; min-height:100vh; background:var(--pink-bg); position:relative; box-shadow:0 0 40px rgba(255,77,141,.10); padding-bottom:84px;}
+  @media(min-width:520px){ body{padding:18px 0;} .phone{border-radius:34px; min-height:calc(100vh - 36px); overflow:hidden;} }
+
+  .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:10px; padding:14px 16px; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; box-shadow:0 4px 16px rgba(255,46,116,.25);}
+  .topbar .ham{width:38px; height:38px; border:none; border-radius:12px; background:rgba(255,255,255,.2); color:#fff; font-size:20px; cursor:pointer;}
+  .topbar .title{font-size:18px; font-weight:800; letter-spacing:.5px;}
+  .topbar .sub{font-size:11px; opacity:.85; font-weight:500;}
+  .topbar .spacer{flex:1;}
+  .topbar .refresh{width:38px; height:38px; border:none; border-radius:12px; background:rgba(255,255,255,.2); color:#fff; font-size:18px; cursor:pointer;}
+  .topbar .refresh.spin{animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .mask{position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:.25s; z-index:40;}
+  .mask.open{opacity:1; pointer-events:auto;}
+  .drawer{position:fixed; top:0; left:0; height:100%; width:78%; max-width:320px; background:#fff; z-index:50; transform:translateX(-102%); transition:.28s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; box-shadow:6px 0 30px rgba(0,0,0,.18);}
+  .drawer.open{transform:translateX(0);}
+  .drawer .dhead{padding:26px 18px 16px; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff;}
+  .drawer .dhead .ava{width:54px; height:54px; border-radius:50%; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:10px;}
+  .drawer .dhead .nm{font-size:18px; font-weight:800;}
+  .drawer .dhead .tg{font-size:12px; opacity:.9; margin-top:2px;}
+  .nav{padding:10px; overflow:auto; flex:1;}
+  .nav button{display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:none; background:transparent; padding:14px 14px; border-radius:14px; font-size:15px; color:var(--ink); cursor:pointer; margin-bottom:4px; font-weight:600;}
+  .nav button .ic{width:34px; height:34px; border-radius:10px; background:var(--pink-soft); color:var(--pink-deep); display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;}
+  .nav button.active{background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff;}
+  .nav button.active .ic{background:rgba(255,255,255,.25); color:#fff;}
+  .dfoot{padding:12px 16px; font-size:11px; color:var(--muted); border-top:1px solid #f2e8ec;}
+
+  .view{padding:16px;}
+  .hidden{display:none!important;}
+  .card{background:var(--card); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 6px 18px rgba(255,77,141,.10); border:1px solid #fff0f5;}
+  .card h3{margin:0 0 12px; font-size:16px; display:flex; align-items:center; gap:8px;}
+  .card h3 .dot{width:8px; height:8px; border-radius:50%; background:var(--pink);}
+  .muted{color:var(--muted); font-size:13px;}
+  .pill{display:inline-block; background:var(--pink-soft); color:var(--pink-deep); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700;}
+
+  .prog{height:12px; border-radius:999px; background:#ffe7f0; overflow:hidden; margin:6px 0 4px;}
+  .prog > i{display:block; height:100%; background:linear-gradient(90deg,var(--pink),var(--pink-deep)); transition:.4s;}
+
+  .item{display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border-radius:13px; background:#fff7fa; margin-bottom:8px; border:1px solid #ffe9f1;}
+  .item.done{opacity:.6;}
+  .item .cb{width:22px; height:22px; border-radius:7px; border:2px solid var(--pink); flex:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; background:#fff; margin-top:1px;}
+  .item.done .cb{background:var(--pink);}
+  .item.done .tx{text-decoration:line-through;}
+  .item .tx{flex:1; font-size:14px; line-height:1.45; border:none; background:transparent; color:var(--ink); width:100%; resize:none; font-family:inherit;}
+  .item .del{border:none; background:transparent; color:#cc9aa8; font-size:16px; cursor:pointer; padding:0 4px;}
+  .addrow{display:flex; gap:8px; margin-top:6px;}
+  .addrow input{flex:1; border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:14px; font-family:inherit; background:#fff;}
+  .btn{border:none; border-radius:12px; padding:11px 16px; font-size:14px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; box-shadow:0 4px 12px rgba(255,46,116,.3);}
+  .btn.ghost{background:#fff; color:var(--pink-deep); border:1px solid var(--line); box-shadow:none;}
+  .btn.sm{padding:7px 11px; font-size:12px;}
+
+  .post{background:var(--card); border-radius:18px; padding:15px; margin-bottom:13px; box-shadow:0 6px 18px rgba(255,77,141,.10); border:1px solid #fff0f5; border-left:5px solid var(--pink);}
+  .post .ttl{font-size:16px; font-weight:800; line-height:1.4; margin-bottom:6px;}
+  .post .tag{color:var(--pink-deep); font-size:13px; font-weight:700; margin-bottom:6px;}
+  .post .desc{font-size:14px; line-height:1.6; color:#5a4a52;}
+  .post .row{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .post .meta{font-size:13px; color:#6a5a62; line-height:1.6; margin:4px 0;}
+  .post .meta b{color:var(--pink-deep);}
+  .badge{font-size:11px; padding:2px 8px; border-radius:999px; background:var(--pink-soft); color:var(--pink-deep); font-weight:700;}
+  .jump{display:inline-flex; align-items:center; gap:4px; border:none; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer; color:#fff;}
+  .j-douyin{background:#161823;} .j-xhs{background:#ff2741;} .j-bili{background:#fb7299;} .j-quark{background:#5b8def;}
+
+  .tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .tabs button{flex:1; border:1px solid var(--line); background:#fff; border-radius:12px; padding:10px; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer;}
+  .tabs button.active{background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; border-color:transparent;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .fld{display:flex; flex-direction:column; gap:5px; margin-bottom:10px;}
+  .fld label{font-size:13px; font-weight:700; color:#6a5a62;}
+  .fld input, .fld textarea, .fld select{border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; font-family:inherit; background:#fff; width:100%;}
+  .fld textarea{resize:vertical; min-height:54px;}
+
+  .mathbox{text-align:center; padding:18px 10px;}
+  .mathq{font-size:40px; font-weight:800; letter-spacing:1px; color:var(--ink); margin:6px 0 14px;}
+  .mathans{font-size:22px; font-weight:800; color:var(--pink-deep); margin:8px 0;}
+  .mathbox input{width:160px; text-align:center; font-size:24px; border:2px solid var(--line); border-radius:14px; padding:8px; font-family:inherit;}
+
+  .word{background:#fff7fa; border:1px solid #ffe9f1; border-radius:14px; padding:12px; margin-bottom:9px; display:flex; align-items:flex-start; gap:10px;}
+  .word .en{font-size:17px; font-weight:800; color:var(--pink-deep);}
+  .word .ph{font-size:13px; color:var(--muted);}
+  .word .mn{font-size:14px; margin-top:2px;}
+  .word .ex{font-size:13px; color:#6a5a62; margin-top:2px; font-style:italic;}
+  .spk{border:none; background:var(--pink-soft); color:var(--pink-deep); border-radius:50%; width:38px; height:38px; font-size:17px; cursor:pointer; flex:none;}
+
+  .shadow{background:#fff7fa; border:1px solid #ffe9f1; border-radius:14px; padding:14px; line-height:1.9; font-size:18px;}
+  .shadow span.hl{background:var(--pink); color:#fff; border-radius:6px; padding:0 3px;}
+  .searchbox{display:flex; gap:8px; margin:10px 0;}
+  .searchbox input{flex:1; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; font-family:inherit;}
+
+  .hero{background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; border-radius:22px; padding:20px 18px; margin-bottom:14px; box-shadow:0 10px 26px rgba(255,46,116,.32);}
+  .hero .hi{font-size:13px; opacity:.9;}
+  .hero .date{font-size:22px; font-weight:800; margin:4px 0 12px;}
+  .quick{display:flex; gap:10px;}
+  .quick button{flex:1; border:none; border-radius:14px; padding:12px 6px; font-size:12px; font-weight:700; color:#fff; cursor:pointer; background:rgba(255,255,255,.18); display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .quick button .e{font-size:20px;}
+  .stat{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; text-align:center;}
+  .stat .b{background:#fff; border-radius:14px; padding:12px 4px; box-shadow:0 4px 12px rgba(255,77,141,.08);}
+  .stat .n{font-size:20px; font-weight:800; color:var(--pink-deep);}
+  .stat .l{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  .status{font-size:12px; color:var(--muted); text-align:center; padding:6px;}
+  .toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%); background:rgba(40,30,36,.92); color:#fff; padding:9px 16px; border-radius:999px; font-size:13px; z-index:60; opacity:0; transition:.25s; pointer-events:none;}
+  .toast.show{opacity:1;}
+
+  .bottom{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; gap:8px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:rgba(255,255,255,.96); border-top:1px solid #ffe0ea; backdrop-filter:blur(6px); z-index:35;}
+  .bottom button{flex:1; border:none; border-radius:14px; padding:11px; font-size:14px; font-weight:800; cursor:pointer; background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; box-shadow:0 4px 12px rgba(255,46,116,.3);}
+  .bottom button.ghost{background:#fff; color:var(--pink-deep); border:1px solid var(--line); box-shadow:none; flex:none; padding:11px 16px;}
+
+  .empty{text-align:center; color:var(--muted); padding:30px 16px; font-size:14px; line-height:1.7;}
+  .empty .big{font-size:34px; margin-bottom:8px;}
+
+  /* 图片文案增强展示 */
+  .img-card{border-left:5px solid var(--pink-deep);}
+  .img-hook{font-size:17px; font-weight:800; line-height:1.45; color:var(--pink-deep); margin-bottom:6px; display:flex; align-items:flex-start; justify-content:space-between; gap:8px;}
+  .img-source{font-size:12px; color:var(--muted); margin-bottom:10px;}
+  .img-section{margin:10px 0;}
+  .img-section .lab{font-size:12px; font-weight:700; color:var(--pink-deep); margin-bottom:4px;}
+  .img-section .txt{font-size:14px; line-height:1.75; color:#4a3a42; white-space:pre-wrap; word-break:break-word;}
+  .img-section .quote{padding:10px 12px; background:var(--pink-soft); border-radius:10px; border-left:3px solid var(--pink); font-weight:600; color:var(--ink);}
+  .img-cta{font-size:15px; font-weight:800; color:var(--pink-deep); text-align:center; padding:11px; background:#fff0f5; border-radius:12px; margin:12px 0; border:1px dashed var(--pink);}
+  .img-cont{border-top:1px dashed var(--line); padding-top:12px; margin-top:12px;}
+  .img-onpic{background:#fff; border:2px dashed var(--pink); border-radius:12px; padding:12px; font-size:15px; line-height:1.95; font-weight:600; color:var(--ink);}
+  .img-hint{font-size:11px; color:var(--muted); margin-top:6px; line-height:1.6;}
+  .wc{font-size:11px; color:#b89ba6; font-weight:500; white-space:nowrap; margin-left:6px;}
+  .tpl-item{background:#fff7fa; border:1px solid #ffe9f1; border-radius:10px; padding:9px 11px; margin-bottom:7px; font-size:13px; line-height:1.6; color:#4a3a42;}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(90deg,#ff5b8d,#ff8fb3);color:#fff;font-weight:700;padding:8px 16px;border-radius:999px;box-shadow:0 4px 14px rgba(255,91,141,.45);font-size:13px;letter-spacing:.5px;">📌 图文验收预览 · 标题+原句+感悟 排版风格</div>
+
+<div class="phone" id="phone">
+  <div class="topbar">
+    <button class="ham" onclick="toggleDrawer()">☰</button>
+    <div>
+      <div class="title">宝妈创作台</div>
+      <div class="sub" id="subDate"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="refresh" id="refreshBtn" onclick="refresh()">⟳</button>
+  </div>
+
+  <div class="view" id="view-home">
+    <div class="hero">
+      <div class="hi" id="heroHi">早安，今天也要加油呀</div>
+      <div class="date" id="heroDate"></div>
+      <div class="quick">
+        <button onclick="openApp('douyin')"><span class="e">🎵</span>抖音</button>
+        <button onclick="openApp('xhs')"><span class="e">📕</span>小红书</button>
+        <button onclick="openApp('bili')"><span class="e">📺</span>B站</button>
+        <button onclick="openApp('quark')"><span class="e">⚡</span>夸克</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日创作速览</h3>
+      <div class="stat" id="homeStat"></div>
+      <div class="status" id="homeStatus" style="margin-top:10px;"></div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn sm ghost" onclick="openView('inspire')">看选题灵感 →</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>我的每日工作流</h3>
+      <div class="muted" style="line-height:1.9;">① 打开「选题灵感 / 图片文案」抄今天的钩子与金句 → ② 用「爆款二创」找角度 → ③ 拍完到「内容复盘」记数据 → ④ 碎片时间刷「英语 / 速算」。</div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-plan">
+    <div class="card">
+      <h3><span class="dot"></span>每日计划 <span class="pill" id="planCount"></span></h3>
+      <div class="prog"><i id="planBar" style="width:0%"></i></div>
+      <div class="muted" id="planPct" style="margin-bottom:8px;"></div>
+      <div id="planList"></div>
+      <div class="addrow">
+        <input id="planInput" placeholder="加一项今日计划…" onkeydown="if(event.key==='Enter')addPlan()">
+        <button class="btn sm" onclick="addPlan()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-inspire">
+    <div class="tabs">
+      <button id="tabIdea" class="active" onclick="setInspireTab('idea')">灵感清单</button>
+      <button id="tabImg" onclick="setInspireTab('img')">图片文案</button>
+    </div>
+    <div id="inspireList"></div>
+    <div id="imgList" class="hidden"></div>
+  </div>
+
+  <div class="view hidden" id="view-remix">
+    <div id="remixList"></div>
+  </div>
+
+  <div class="view hidden" id="view-review">
+    <div class="card">
+      <h3><span class="dot"></span>新增一条复盘</h3>
+      <div class="grid2">
+        <div class="fld"><label>平台</label><select id="rvPlatform"><option>抖音</option><option>小红书</option><option>B站</option><option>视频号</option><option>其他</option></select></div>
+        <div class="fld"><label>日期</label><input id="rvDate" type="date"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label>播放</label><input id="rvPlay" type="number" placeholder="0"></div>
+        <div class="fld"><label>点赞</label><input id="rvLike" type="number" placeholder="0"></div>
+        <div class="fld"><label>评论</label><input id="rvComment" type="number" placeholder="0"></div>
+        <div class="fld"><label>转发</label><input id="rvShare" type="number" placeholder="0"></div>
+      </div>
+      <div class="fld"><label>亮点</label><textarea id="rvGood" placeholder="这条为什么数据好？"></textarea></div>
+      <div class="fld"><label>问题</label><textarea id="rvBad" placeholder="哪里可以更好？"></textarea></div>
+      <div class="fld"><label>优化（下次这么做）</label><textarea id="rvOpt" placeholder="下次改进动作…"></textarea></div>
+      <button class="btn" onclick="saveReview()">保存复盘</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>历史复盘 <span class="pill" id="rvCount"></span></h3>
+      <div id="reviewList"></div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-memo">
+    <div class="card">
+      <h3><span class="dot"></span>备忘录</h3>
+      <div id="memoList"></div>
+      <div class="addrow">
+        <input id="memoInput" placeholder="加一行备忘…" onkeydown="if(event.key==='Enter')addMemo()">
+        <button class="btn sm" onclick="addMemo()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-math">
+    <div class="card">
+      <h3><span class="dot"></span>速算练习 <span class="pill" id="mathProg"></span></h3>
+      <div class="mathbox">
+        <div class="muted">今日题包（来自微信专辑 / 本地生成）</div>
+        <div class="mathq" id="mathQ"></div>
+        <input id="mathA" type="number" placeholder="?">
+        <div class="mathans" id="mathR"></div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn sm ghost" onclick="checkMath()">提交</button>
+          <button class="btn sm ghost" onclick="mathPrev()">上一题</button>
+          <button class="btn sm ghost" onclick="mathNext()">下一题</button>
+        </div>
+        <div style="margin-top:10px;"><button class="btn sm" onclick="reloadMath()">换一批</button></div>
+        <div class="status" id="mathScore"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="view-english">
+    <div class="card">
+      <h3><span class="dot"></span>成年人零基础 · 30天计划</h3>
+      <div id="enPlan" class="muted" style="line-height:1.8;"></div>
+      <div class="status" id="enDay"></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日单词 <span class="pill">跟着读</span></h3>
+      <div id="enWords"></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日语法</h3>
+      <div id="enGrammar" class="muted" style="font-size:14px;line-height:1.7;"></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>影子跟读（逐字跟读）</h3>
+      <div class="shadow" id="shadowText"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn sm" onclick="shadowPlay()">▶ 逐字跟读</button>
+        <button class="btn sm ghost" onclick="shadowRecord()" id="recBtn">● 录我的</button>
+        <button class="btn sm ghost" onclick="shadowPlayback()" id="pbBtn" style="display:none;">♪ 听我的</button>
+      </div>
+      <div class="searchbox">
+        <input id="enSearch" placeholder="搜跟读素材，如 baby morning routine">
+        <button class="btn sm ghost" onclick="enSearch('youglish')">YouGlish</button>
+        <button class="btn sm ghost" onclick="enSearch('youtube')">YouTube</button>
+        <button class="btn sm ghost" onclick="enSearch('bing')">Bing</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <button class="ghost" onclick="refresh()">⟳ 刷新今日</button>
+    <button onclick="scrollTop()">回到顶部</button>
+  </div>
+</div>
+
+<div class="mask" id="mask" onclick="toggleDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="dhead">
+    <div class="ava">👩‍👧</div>
+    <div class="nm">宝妈勇闯自媒体</div>
+    <div class="tg">移动端创作工作台 · 数据存本地</div>
+  </div>
+  <div class="nav" id="nav">
+    <button data-v="home" class="active" onclick="openView('home')"><span class="ic">🏠</span>首页</button>
+    <button data-v="plan" onclick="openView('plan')"><span class="ic">✅</span>每日计划</button>
+    <button data-v="inspire" onclick="openView('inspire')"><span class="ic">💡</span>选题灵感</button>
+    <button data-v="remix" onclick="openView('remix')"><span class="ic">🔥</span>爆款二创</button>
+    <button data-v="review" onclick="openView('review')"><span class="ic">📊</span>内容复盘</button>
+    <button data-v="memo" onclick="openView('memo')"><span class="ic">📝</span>备忘录</button>
+    <button data-v="math" onclick="openView('math')"><span class="ic">🧮</span>速算练习</button>
+    <button data-v="english" onclick="openView('english')"><span class="ic">🔤</span>英语练习</button>
+  </div>
+  <div class="dfoot">内容每天早8/下午2/晚8 自动更新 · 来源 GitHub Gist</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 基础工具 ============ */
+const GIST_ID = 'e6a67778926366fcb97bc42d69a20eb7';
+const $ = sel => document.querySelector(sel);
+const $all = sel => Array.from(document.querySelectorAll(sel));
+const $id = id => document.getElementById(id);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function LS(k,v){ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function toast(m){ const t = $id('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1600); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function cnLen(s){ return (s||'').replace(/\s/g,'').length; }
+function cnSents(s){ return (s||'').split(/(?<=。|！|？|!|\?)/).filter(p=>p.trim()); }
+
+/* ============ 深链唤起 App ============ */
+const PLAT = {
+  douyin:{scheme:'snssdk1128://', web:'https://www.douyin.com/search?keyword='},
+  bili:{scheme:'bilibili://', web:'https://search.bilibili.com/all?keyword='},
+  xhs:{scheme:'xhsdiscover://', web:'https://www.xiaohongshu.com/search_result?keyword='},
+  quark:{scheme:'quark://', web:'https://www.quark.cn'}
+};
+function openApp(p, kw){
+  const c = PLAT[p]; if(!c) return;
+  const url = c.web + encodeURIComponent(kw||'');
+  if(c.scheme){
+    const t = Date.now();
+    try{ location.href = c.scheme + (kw?('?keyword='+encodeURIComponent(kw)):''); }catch(e){}
+    setTimeout(()=>{ if(Date.now()-t < 2500) window.open(url,'_blank'); }, 700);
+  } else {
+    window.open(url,'_blank');
+  }
+}
+
+/* ============ 抽屉 / 视图 ============ */
+function toggleDrawer(){ $id('drawer').classList.toggle('open'); $id('mask').classList.toggle('open'); }
+function openView(v){
+  $all('.view').forEach(el=>el.classList.add('hidden'));
+  $id('view-'+v).classList.remove('hidden');
+  $all('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===v));
+  $id('drawer').classList.remove('open'); $id('mask').classList.remove('open');
+  state.view = v;
+  if(v==='plan') renderPlan();
+  if(v==='memo') renderMemo();
+  if(v==='review') renderReview();
+  if(v==='math') renderMath();
+  if(v==='english') renderEnglish();
+  if(v==='inspire'){ renderInspire(); renderImg(); }
+  if(v==='remix') renderRemix();
+  if(v==='home') renderHome();
+  window.scrollTo(0,0);
+}
+function scrollTop(){ window.scrollTo({top:0,behavior:'smooth'}); }
+
+/* ============ 状态 ============ */
+const state = { daily:null, view:'home', inspireTab:'idea', mathIdx:0, mathRight:0, mathWrong:0, recBlob:null };
+
+/* ============ 预览数据（本地验收用，覆盖 Gist 拉取） ============ */
+const __PREVIEW_DATA__ = {"date": "2026-07-29", "updated_at": "2026-07-29T15:50:56", "source": "GitHub Gist (自动生成)", "hotlists": {"douyin": [{"title": "五颜六色是中国的夏日底色", "link": "https://www.douyin.com/search/%E4%BA%94%E9%A2%9C%E5%85%AD%E8%89%B2%E6%98%AF%E4%B8%AD%E5%9B%BD%E7%9A%84%E5%A4%8F%E6%97%A5%E5%BA%95%E8%89%B2"}, {"title": "汉服魅力不分国界", "link": "https://www.douyin.com/search/%E6%B1%89%E6%9C%8D%E9%AD%85%E5%8A%9B%E4%B8%8D%E5%88%86%E5%9B%BD%E7%95%8C"}, {"title": "上半年新质生产力发展成效明显", "link": "https://www.douyin.com/search/%E4%B8%8A%E5%8D%8A%E5%B9%B4%E6%96%B0%E8%B4%A8%E7%94%9F%E4%BA%A7%E5%8A%9B%E5%8F%91%E5%B1%95%E6%88%90%E6%95%88%E6%98%8E%E6%98%BE"}, {"title": "家人来到我的出租屋belike", "link": "https://www.douyin.com/search/%E5%AE%B6%E4%BA%BA%E6%9D%A5%E5%88%B0%E6%88%91%E7%9A%84%E5%87%BA%E7%A7%9F%E5%B1%8Bbelike"}, {"title": "挑战夏日穿搭一周不重样", "link": "https://www.douyin.com/search/%E6%8C%91%E6%88%98%E5%A4%8F%E6%97%A5%E7%A9%BF%E6%90%AD%E4%B8%80%E5%91%A8%E4%B8%8D%E9%87%8D%E6%A0%B7"}, {"title": "郑钦文遭逆转止步首轮", "link": "https://www.douyin.com/search/%E9%83%91%E9%92%A6%E6%96%87%E9%81%AD%E9%80%86%E8%BD%AC%E6%AD%A2%E6%AD%A5%E9%A6%96%E8%BD%AE"}, {"title": "曾洪扬任四川省副省长", "link": "https://www.douyin.com/search/%E6%9B%BE%E6%B4%AA%E6%89%AC%E4%BB%BB%E5%9B%9B%E5%B7%9D%E7%9C%81%E5%89%AF%E7%9C%81%E9%95%BF"}, {"title": "国家助学贷款怎么申请", "link": "https://www.douyin.com/search/%E5%9B%BD%E5%AE%B6%E5%8A%A9%E5%AD%A6%E8%B4%B7%E6%AC%BE%E6%80%8E%E4%B9%88%E7%94%B3%E8%AF%B7"}, {"title": "AL官宣Flandre正式离队", "link": "https://www.douyin.com/search/AL%E5%AE%98%E5%AE%A3Flandre%E6%AD%A3%E5%BC%8F%E7%A6%BB%E9%98%9F"}, {"title": "套娃没射中变成木板借箭了", "link": "https://www.douyin.com/search/%E5%A5%97%E5%A8%83%E6%B2%A1%E5%B0%84%E4%B8%AD%E5%8F%98%E6%88%90%E6%9C%A8%E6%9D%BF%E5%80%9F%E7%AE%AD%E4%BA%86"}, {"title": "回到了2018的夏天", "link": "https://www.douyin.com/search/%E5%9B%9E%E5%88%B0%E4%BA%862018%E7%9A%84%E5%A4%8F%E5%A4%A9"}, {"title": "蜘蛛侠4零点场口碑夯中夯", "link": "https://www.douyin.com/search/%E8%9C%98%E8%9B%9B%E4%BE%A04%E9%9B%B6%E7%82%B9%E5%9C%BA%E5%8F%A3%E7%A2%91%E5%A4%AF%E4%B8%AD%E5%A4%AF"}, {"title": "官方通报网传玉米地有豹子", "link": "https://www.douyin.com/search/%E5%AE%98%E6%96%B9%E9%80%9A%E6%8A%A5%E7%BD%91%E4%BC%A0%E7%8E%89%E7%B1%B3%E5%9C%B0%E6%9C%89%E8%B1%B9%E5%AD%90"}, {"title": "台风“白海豚”爆发式增强", "link": "https://www.douyin.com/search/%E5%8F%B0%E9%A3%8E%E2%80%9C%E7%99%BD%E6%B5%B7%E8%B1%9A%E2%80%9D%E7%88%86%E5%8F%91%E5%BC%8F%E5%A2%9E%E5%BC%BA"}, {"title": "苹果呼吁用户尽快完成设备升级", "link": "https://www.douyin.com/search/%E8%8B%B9%E6%9E%9C%E5%91%BC%E5%90%81%E7%94%A8%E6%88%B7%E5%B0%BD%E5%BF%AB%E5%AE%8C%E6%88%90%E8%AE%BE%E5%A4%87%E5%8D%87%E7%BA%A7"}, {"title": "功夫女足20亿解锁周星驰惊喜抖音", "link": "https://www.douyin.com/search/%E5%8A%9F%E5%A4%AB%E5%A5%B3%E8%B6%B320%E4%BA%BF%E8%A7%A3%E9%94%81%E5%91%A8%E6%98%9F%E9%A9%B0%E6%83%8A%E5%96%9C%E6%8A%96%E9%9F%B3"}, {"title": "抖音乒乓百分大战下次见", "link": "https://www.douyin.com/search/%E6%8A%96%E9%9F%B3%E4%B9%92%E4%B9%93%E7%99%BE%E5%88%86%E5%A4%A7%E6%88%98%E4%B8%8B%E6%AC%A1%E8%A7%81"}, {"title": "曝克莱或将寻求买断离开独行侠", "link": "https://www.douyin.com/search/%E6%9B%9D%E5%85%8B%E8%8E%B1%E6%88%96%E5%B0%86%E5%AF%BB%E6%B1%82%E4%B9%B0%E6%96%AD%E7%A6%BB%E5%BC%80%E7%8B%AC%E8%A1%8C%E4%BE%A0"}, {"title": "烤肉师傅“烤斯克”回应走红", "link": "https://www.douyin.com/search/%E7%83%A4%E8%82%89%E5%B8%88%E5%82%85%E2%80%9C%E7%83%A4%E6%96%AF%E5%85%8B%E2%80%9D%E5%9B%9E%E5%BA%94%E8%B5%B0%E7%BA%A2"}, {"title": "年会2剧组人均隐藏舞王", "link": "https://www.douyin.com/search/%E5%B9%B4%E4%BC%9A2%E5%89%A7%E7%BB%84%E4%BA%BA%E5%9D%87%E9%9A%90%E8%97%8F%E8%88%9E%E7%8E%8B"}, {"title": "宇泽沐沐官宣结婚", "link": "https://www.douyin.com/search/%E5%AE%87%E6%B3%BD%E6%B2%90%E6%B2%90%E5%AE%98%E5%AE%A3%E7%BB%93%E5%A9%9A"}, {"title": "一键开启夏日色彩丰荣", "link": "https://www.douyin.com/search/%E4%B8%80%E9%94%AE%E5%BC%80%E5%90%AF%E5%A4%8F%E6%97%A5%E8%89%B2%E5%BD%A9%E4%B8%B0%E8%8D%A3"}, {"title": "阿哲自制综艺六人大头杀来了", "link": "https://www.douyin.com/search/%E9%98%BF%E5%93%B2%E8%87%AA%E5%88%B6%E7%BB%BC%E8%89%BA%E5%85%AD%E4%BA%BA%E5%A4%A7%E5%A4%B4%E6%9D%80%E6%9D%A5%E4%BA%86"}, {"title": "挑战同时亲父母看他们先看谁", "link": "https://www.douyin.com/search/%E6%8C%91%E6%88%98%E5%90%8C%E6%97%B6%E4%BA%B2%E7%88%B6%E6%AF%8D%E7%9C%8B%E4%BB%96%E4%BB%AC%E5%85%88%E7%9C%8B%E8%B0%81"}, {"title": "大连之眼不会错过任何一个热梗", "link": "https://www.douyin.com/search/%E5%A4%A7%E8%BF%9E%E4%B9%8B%E7%9C%BC%E4%B8%8D%E4%BC%9A%E9%94%99%E8%BF%87%E4%BB%BB%E4%BD%95%E4%B8%80%E4%B8%AA%E7%83%AD%E6%A2%97"}], "weibo": [{"title": "343斤网红徒步峨眉山晕倒被抬下山", "link": "https://s.weibo.com/weibo?q=343%E6%96%A4%E7%BD%91%E7%BA%A2%E5%BE%92%E6%AD%A5%E5%B3%A8%E7%9C%89%E5%B1%B1%E6%99%95%E5%80%92%E8%A2%AB%E6%8A%AC%E4%B8%8B%E5%B1%B1"}, {"title": "会计被AI取代的概率", "link": "https://s.weibo.com/weibo?q=%E4%BC%9A%E8%AE%A1%E8%A2%ABAI%E5%8F%96%E4%BB%A3%E7%9A%84%E6%A6%82%E7%8E%87"}, {"title": "王戟是谁", "link": "https://s.weibo.com/weibo?q=%E7%8E%8B%E6%88%9F%E6%98%AF%E8%B0%81"}, {"title": "千万不要把手机交给商家写好评", "link": "https://s.weibo.com/weibo?q=%E5%8D%83%E4%B8%87%E4%B8%8D%E8%A6%81%E6%8A%8A%E6%89%8B%E6%9C%BA%E4%BA%A4%E7%BB%99%E5%95%86%E5%AE%B6%E5%86%99%E5%A5%BD%E8%AF%84"}, {"title": "张凌赫让金靖别站在自己和章若楠中间", "link": "https://s.weibo.com/weibo?q=%E5%BC%A0%E5%87%8C%E8%B5%AB%E8%AE%A9%E9%87%91%E9%9D%96%E5%88%AB%E7%AB%99%E5%9C%A8%E8%87%AA%E5%B7%B1%E5%92%8C%E7%AB%A0%E8%8B%A5%E6%A5%A0%E4%B8%AD%E9%97%B4"}, {"title": "山姆已下架泸溪河坚果桃酥", "link": "https://s.weibo.com/weibo?q=%E5%B1%B1%E5%A7%86%E5%B7%B2%E4%B8%8B%E6%9E%B6%E6%B3%B8%E6%BA%AA%E6%B2%B3%E5%9D%9A%E6%9E%9C%E6%A1%83%E9%85%A5"}, {"title": "小蓝灯", "link": "https://s.weibo.com/weibo?q=%E5%B0%8F%E8%93%9D%E7%81%AF"}, {"title": "泸溪河桃酥 牙冠", "link": "https://s.weibo.com/weibo?q=%E6%B3%B8%E6%BA%AA%E6%B2%B3%E6%A1%83%E9%85%A5%20%E7%89%99%E5%86%A0"}, {"title": "将门独后全阵容官宣", "link": "https://s.weibo.com/weibo?q=%E5%B0%86%E9%97%A8%E7%8B%AC%E5%90%8E%E5%85%A8%E9%98%B5%E5%AE%B9%E5%AE%98%E5%AE%A3"}, {"title": "AG赛中射辅轮换", "link": "https://s.weibo.com/weibo?q=AG%E8%B5%9B%E4%B8%AD%E5%B0%84%E8%BE%85%E8%BD%AE%E6%8D%A2"}, {"title": "苏醒谈谢娜李荣浩亲自下场", "link": "https://s.weibo.com/weibo?q=%E8%8B%8F%E9%86%92%E8%B0%88%E8%B0%A2%E5%A8%9C%E6%9D%8E%E8%8D%A3%E6%B5%A9%E4%BA%B2%E8%87%AA%E4%B8%8B%E5%9C%BA"}, {"title": "还以为易烊千玺做美甲了", "link": "https://s.weibo.com/weibo?q=%E8%BF%98%E4%BB%A5%E4%B8%BA%E6%98%93%E7%83%8A%E5%8D%83%E7%8E%BA%E5%81%9A%E7%BE%8E%E7%94%B2%E4%BA%86"}, {"title": "但斌 大跌一定要敢买", "link": "https://s.weibo.com/weibo?q=%E4%BD%86%E6%96%8C%20%E5%A4%A7%E8%B7%8C%E4%B8%80%E5%AE%9A%E8%A6%81%E6%95%A2%E4%B9%B0"}, {"title": "初中生曝光侵华日军罪证被死亡威胁", "link": "https://s.weibo.com/weibo?q=%E5%88%9D%E4%B8%AD%E7%94%9F%E6%9B%9D%E5%85%89%E4%BE%B5%E5%8D%8E%E6%97%A5%E5%86%9B%E7%BD%AA%E8%AF%81%E8%A2%AB%E6%AD%BB%E4%BA%A1%E5%A8%81%E8%83%81"}, {"title": "Bin和Flandre竞争首发", "link": "https://s.weibo.com/weibo?q=Bin%E5%92%8CFlandre%E7%AB%9E%E4%BA%89%E9%A6%96%E5%8F%91"}, {"title": "警方通报女子高铁上叫嚣全家体制内", "link": "https://s.weibo.com/weibo?q=%E8%AD%A6%E6%96%B9%E9%80%9A%E6%8A%A5%E5%A5%B3%E5%AD%90%E9%AB%98%E9%93%81%E4%B8%8A%E5%8F%AB%E5%9A%A3%E5%85%A8%E5%AE%B6%E4%BD%93%E5%88%B6%E5%86%85"}, {"title": "十日终焉杀青", "link": "https://s.weibo.com/weibo?q=%E5%8D%81%E6%97%A5%E7%BB%88%E7%84%89%E6%9D%80%E9%9D%92"}, {"title": "一觉没睡和豆包聊了8个小时", "link": "https://s.weibo.com/weibo?q=%E4%B8%80%E8%A7%89%E6%B2%A1%E7%9D%A1%E5%92%8C%E8%B1%86%E5%8C%85%E8%81%8A%E4%BA%868%E4%B8%AA%E5%B0%8F%E6%97%B6"}, {"title": "女子修手机被店家偷存40张私人照片", "link": "https://s.weibo.com/weibo?q=%E5%A5%B3%E5%AD%90%E4%BF%AE%E6%89%8B%E6%9C%BA%E8%A2%AB%E5%BA%97%E5%AE%B6%E5%81%B7%E5%AD%9840%E5%BC%A0%E7%A7%81%E4%BA%BA%E7%85%A7%E7%89%87"}, {"title": "被老师殴打女生确诊焦虑抑郁", "link": "https://s.weibo.com/weibo?q=%E8%A2%AB%E8%80%81%E5%B8%88%E6%AE%B4%E6%89%93%E5%A5%B3%E7%94%9F%E7%A1%AE%E8%AF%8A%E7%84%A6%E8%99%91%E6%8A%91%E9%83%81"}, {"title": "其实补气血真的很简单", "link": "https://s.weibo.com/weibo?q=%E5%85%B6%E5%AE%9E%E8%A1%A5%E6%B0%94%E8%A1%80%E7%9C%9F%E7%9A%84%E5%BE%88%E7%AE%80%E5%8D%95"}, {"title": "与檀健次在银河相遇吧", "link": "https://s.weibo.com/weibo?q=%E4%B8%8E%E6%AA%80%E5%81%A5%E6%AC%A1%E5%9C%A8%E9%93%B6%E6%B2%B3%E7%9B%B8%E9%81%87%E5%90%A7"}, {"title": "飞鹤让纯净有了具象的模样", "link": "https://s.weibo.com/weibo?q=%E9%A3%9E%E9%B9%A4%E8%AE%A9%E7%BA%AF%E5%87%80%E6%9C%89%E4%BA%86%E5%85%B7%E8%B1%A1%E7%9A%84%E6%A8%A1%E6%A0%B7"}, {"title": "迪丽热巴29.5克拉海蓝宝颈链", "link": "https://s.weibo.com/weibo?q=%E8%BF%AA%E4%B8%BD%E7%83%AD%E5%B7%B429.5%E5%85%8B%E6%8B%89%E6%B5%B7%E8%93%9D%E5%AE%9D%E9%A2%88%E9%93%BE"}, {"title": "姐姐陪弟弟弟媳拍婚纱照引争议", "link": "https://s.weibo.com/weibo?q=%E5%A7%90%E5%A7%90%E9%99%AA%E5%BC%9F%E5%BC%9F%E5%BC%9F%E5%AA%B3%E6%8B%8D%E5%A9%9A%E7%BA%B1%E7%85%A7%E5%BC%95%E4%BA%89%E8%AE%AE"}], "zhihu": [{"title": "上海一室一厅酒店月租 12000 元起，半数客人为长住客，原因为何？真的比租房划算吗？", "link": "https://www.zhihu.com/question/2065045395525390422"}, {"title": "韩国股市今年以来第九次触发熔断机制，这一轮下跌最终会如何收场？", "link": "https://www.zhihu.com/question/2065767078427113175"}, {"title": "疑似南方医科大学珠江医院一医生发布「除非死人，不要临时请假」言论，院方已启动调查，反映了哪些问题？", "link": "https://www.zhihu.com/question/2065711565274177872"}, {"title": "许多网友反馈在泸溪河桃酥里吃出牙冠、牙齿、头发等异物，山姆已将其下架，可能是什么环节的问题？", "link": "https://www.zhihu.com/question/2065716053770859492"}, {"title": "如何看待国外某历史学老师在考试题目中加入隐藏提示词抓 AI 作弊，35 名学生中 32 人中招？", "link": "https://www.zhihu.com/question/2065158710427751418"}, {"title": "斗地主中，为什么地主只有三张牌的优势就可以一打二了？", "link": "https://www.zhihu.com/question/2063214681746153896"}, {"title": "为什么好多人根本没有意识到，其实大部分人个人手机的性能是超过他个人电脑（公司等的不算）的？", "link": "https://www.zhihu.com/question/2047098527092828152"}, {"title": "河北 860 元一晚酒店半夜关空调导致客人被热醒，酒店空调间断关停合法吗？消费者该怎样维权？", "link": "https://www.zhihu.com/question/2065344071745233365"}, {"title": "为什么黄金几乎在所有文明里都是贵重金属，并且作为了货币？", "link": "https://www.zhihu.com/question/23846763"}, {"title": "江苏 14 岁乒乓选手曹彦灏比赛失利后拳击对手，事件严重程度如何？判禁赛一年合理吗？", "link": "https://www.zhihu.com/question/2065664493460493869"}, {"title": "如何看待 SK 海力士二季度营收 79 万亿韩元，净利润 60.54 万亿韩元？", "link": "https://www.zhihu.com/question/2065710317829452475"}, {"title": "日本7.1级强震，熊本县商场、桥梁、工厂烟囱等坍塌，有当地人讲讲亲历了怎样的震动吗？都是怎样避险的？", "link": "https://www.zhihu.com/question/2065511346351731928"}, {"title": "有哪些“中国标准”成为“世界标准”的例子？", "link": "https://www.zhihu.com/question/430077118"}, {"title": "苏超的热度为什么降温了？", "link": "https://www.zhihu.com/question/2064631785892454410"}, {"title": "《人民的名义》里，高育良和李达康都没贪钱，为什么一个坐牢一个过关？", "link": "https://www.zhihu.com/question/2061881728478737461"}, {"title": "王虹的经历是不是说明了，教育和环境对一个人发展的影响其实比很多人认为的大的多？", "link": "https://www.zhihu.com/question/2064984398307578588"}, {"title": "如何看待房主任离婚选择净身出户后，现在申请独立户口遭拒一事及其在节目中的表现？", "link": "https://www.zhihu.com/question/2059388918152304542"}, {"title": "为什么越来越多人客厅不要沙发了，那用什么替代呢？", "link": "https://www.zhihu.com/question/668026601"}, {"title": "如何看待广西日报特稿《王的猜想》因王虹获菲尔兹奖被炒到65元一份，再现「洛阳纸贵」的现象？", "link": "https://www.zhihu.com/question/2065739488693899762"}, {"title": "寿司郎财报显示，一家中国大陆门店营收是日本店的 1.6 倍，利润接近三倍，为何该商业模式能在中国成功？", "link": "https://www.zhihu.com/question/2065453278121431256"}, {"title": "普京自曝会上网看俄乌冲突分析帖子，为他们说到点子上而高兴，会从论坛、博主那里了解战场情况，如何解读？", "link": "https://www.zhihu.com/question/2065406460100715313"}, {"title": "LPL官网更新AL大名单，Flandre已离队，网传将加入BLG，消息可靠吗？将带来哪些影响？", "link": "https://www.zhihu.com/question/2065559361955390936"}, {"title": "怎么看待马斯克表示正在派船回收 Starship S40？", "link": "https://www.zhihu.com/question/2065722275467417059"}, {"title": "如何看待那英在直播中说「那个冉莹颖是吧，她就是个败家的玩意」？这算真性情吗？", "link": "https://www.zhihu.com/question/2065376504578400455"}, {"title": "现在来看奥尼尔非常容易对付，怎么当年没人做得到呢？", "link": "https://www.zhihu.com/question/2063989034679121234"}], "toutiao": [{"title": "女子高铁叫嚣全家体制内 官方通报", "link": "https://www.toutiao.com/trending/7667819721118764554"}, {"title": "少年被北大录取 当地政府送8万助学金", "link": "https://www.toutiao.com/trending/7667617089053642259"}, {"title": "暑期文旅消费持续升温", "link": "https://www.toutiao.com/article/7667541788307063338"}, {"title": "日本强震瞬间满载货车被抛起", "link": "https://www.toutiao.com/trending/7667766651118636582"}, {"title": "张莹辞去江西省副省长职务", "link": "https://www.toutiao.com/trending/7667800719798272026"}, {"title": "女子修手机被店主导出40多张私密照", "link": "https://www.toutiao.com/trending/7667415040820101171"}, {"title": "中国GDP全球第二为何股市仍有差距", "link": "https://www.toutiao.com/trending/7667803379451563570"}, {"title": "中国新型机器人视频在国外爆火", "link": "https://www.toutiao.com/trending/7667145172241121321"}, {"title": "特朗普被发现在格雷厄姆葬礼打瞌睡", "link": "https://www.toutiao.com/trending/7667418781938679858"}, {"title": "韩股崩盘6周暴跌40%", "link": "https://www.toutiao.com/trending/7667804440975609353"}, {"title": "延安一地发现豹子踪迹？假的", "link": "https://www.toutiao.com/trending/7667236417135755310"}, {"title": "赵钰琪14岁的美人胚子", "link": "https://www.toutiao.com/trending/7667511769925844998"}, {"title": "谢贤去世后张柏芝首次公开露面", "link": "https://www.toutiao.com/trending/7666850854578257966"}, {"title": "印度两男子涉嫌轮奸被警察当街暴打", "link": "https://www.toutiao.com/trending/7667757544048050226"}, {"title": "日本强震时天空出现巨型蘑菇云", "link": "https://www.toutiao.com/trending/7667573326554123826"}, {"title": "官方通报女生提醒同学别睡觉被老师打", "link": "https://www.toutiao.com/trending/7667760736063684654"}, {"title": "俄乌冲突出现重要“转向”", "link": "https://www.toutiao.com/trending/7667211113528492068"}, {"title": "日本强震致神社垮塌列车脱轨", "link": "https://www.toutiao.com/trending/7667713008373894707"}, {"title": "吉林汪清洪流淹没街道：大量菌包涌入", "link": "https://www.toutiao.com/trending/7667839529318878746"}, {"title": "罗马斗兽场中文广播寻人很有喜感", "link": "https://www.toutiao.com/trending/7667844353561366042"}, {"title": "黄政民被曝出轨", "link": "https://www.toutiao.com/trending/7667150492237414406"}, {"title": "日本7.1级强震河水翻浪大桥坍塌", "link": "https://www.toutiao.com/trending/7667374927125528612"}, {"title": "17岁哥哥上中科大15岁妹妹上北大", "link": "https://www.toutiao.com/trending/7667571958996815414"}, {"title": "奥迪Q9及SQ9正式亮相", "link": "https://www.toutiao.com/trending/7666700842812440618"}, {"title": "日本倒塌购物中心内部画面公布", "link": "https://www.toutiao.com/trending/7667591881622143017"}], "news60": [{"title": "上半年全国税费收入达 16.7 万亿元，其中税收收入超过 10 万亿元，同比增长 4.9%"}, {"title": "2025 年度个税汇算超 1 亿纳税人享受退税 1500 多亿元，中低收入者受益面提升"}, {"title": "上半年我国银行理财产品为投资者创造收益 3052 亿元，平均年化收益率为 2.05%"}, {"title": "北京出台信用卡业务新规：分期业务须突出展示折算年化利率"}, {"title": "长鑫科技将被纳入 MSCI 中国全股票指数，8 月 10 日生效"}, {"title": "月之暗面全栈开源 Kimi K3，引爆全球开发者社区，登顶 “抱抱脸” 平台趋势榜榜首"}, {"title": "AI 短剧上线安徽卫视，画面上明确标注 AI 制作，有人惊呼太超前，也有人吐槽没有人味"}, {"title": "教育部：国家助学贷款累计发放 6958 亿元，惠及学生超 3000 万人"}, {"title": "河南 “三支一扶” 高分成绩引争议，当地再回应：正进行深入核查，查实一个取消一个"}, {"title": "奥地利拟出台法案，限制 14 岁以下儿童青少年使用社交媒体"}, {"title": "日本熊本县 28 日发生 7.1 级强震，多处房屋倒塌，已确认数人遇难，财产损失严重"}, {"title": "欧盟：法国和西班牙山火蔓延速度已超出现有应急处置能力"}, {"title": "2026 年《财富》世界 500 强排行榜：亚马逊登顶，终结沃尔玛连续十二年领跑纪录"}, {"title": "美国宣布和英国、德国、日本等 24 国组建 6G 研发联盟，旨在制定 6G 标准"}, {"title": "俄罗斯决定组建建筑工程部队，并将俄武装力量编制总人数增至 242 万余人"}]}, "topic_inspirations": [{"title": "上半年新质生产力：带娃搞钱也要新质", "tag": "#宝妈逆袭 #带娃搞钱 #新质生产力", "desc": "上半年新质生产力成效明显，咱宝妈搞自媒体也得有新质思维——不是蛮干，是学方法、找效率、长期主义。带娃间隙刷推荐页、学剪辑，每一步都在为未来铺路。。这个选项没有门槛，普通宝妈照着拍，也能拿到属于自己的流量。", "platform": "douyin", "type": "热点二创"}, {"title": "郑钦文遭逆转：输赢常态，坚持才有光", "tag": "#女性力量 #带娃成长 #坚持", "desc": "郑钦文止步首轮，但她的拼搏精神让人动容。咱宝妈做自媒体也一样，今天数据不好，不代表明天不行。输了再来，孩子看着呢，咱不能怂。。当你把它和真实生活挂钩时，算法自然会长出共鸣。", "platform": "douyin", "type": "情感共鸣"}, {"title": "国家助学贷款：给娃的底气从自己开始", "tag": "#搞钱日常 #柴米油盐 #女性独立", "desc": "国家助学贷款政策是很多家庭的希望。咱宝妈搞钱，就是为了将来娃不用愁学费。现在努力做自媒体，哪怕还没赚到，但方向对了，离目标就近一步。。不需要华丽机位，真实和扎心就是这条赛道最大的流量密码。", "platform": "xhs", "type": "搞钱记录"}, {"title": "家人来出租屋：有爱的地方就是家，", "tag": "#宝妈生活 #柴米油盐 #正能量", "desc": "热搜上家人来出租屋的温馨，让我想起自己带娃的出租屋。虽然小，但娃的笑声就是全部。搞钱是为了让这个家更稳，不为了别的。。别怕没人看，先发出去，对的人会在评论区等你。", "platform": "douyin", "type": "情感共鸣"}, {"title": "暑期文旅消费热：带娃看世界也要有底气", "tag": "#带娃日常 #女性成长 #搞钱", "desc": "暑期文旅消费火爆，我也想带娃去看看。但钱包不鼓，心里没底。所以更得努力搞自媒体，赚到第一笔，带娃看世界。。这个选项没有门槛，普通宝妈照着拍，也能拿到属于自己的流量。", "platform": "xhs", "type": "成长记录"}, {"title": "女子高铁叫嚣全家体制内：底气不是靠别人", "tag": "#女性独立 #搞钱 #正能量", "desc": "高铁上那女的叫嚣全家体制内，真是笑话。咱宝妈明白，真正的底气是自己挣来的。靠山山会倒，靠自己最牢。。当你把它和真实生活挂钩时，算法自然会长出共鸣。。不需要华丽机位，真实和扎心就是这条赛道最大的流量密码。", "platform": "douyin", "type": "情感共鸣"}, {"title": "初中生曝光侵华日军罪证：爱国从娃抓起", "tag": "#正能量 #带娃成长 #爱国", "desc": "初中生曝光日军罪证被威胁，太勇敢了。咱带娃也要教他爱国、正直。搞钱的同时，别忘了给孩子传递正确的价值观。。不需要华丽机位，真实和扎心就是这条赛道最大的流量密码。", "platform": "xhs", "type": "成长记录"}, {"title": "一觉没睡和豆包聊8小时：AI时代宝妈也要学", "tag": "#女性成长 #搞钱 #AI", "desc": "和豆包聊8小时，太真实了。AI时代，咱宝妈也得学新技能，才能不被淘汰。做自媒体用AI辅助，说不定能更快搞到第一笔。。别怕没人看，先发出去，对的人会在评论区等你。", "platform": "bili", "type": "成长记录"}, {"title": "女子修手机被存私照：保护隐私，搞钱更要安全", "tag": "#女性独立 #搞钱 #柴米油盐", "desc": "修手机被存私照，太可怕了。咱宝妈搞自媒体，也要注意隐私安全。赚钱重要，保护好自己和娃更重要。。这个选项没有门槛，普通宝妈照着拍，也能拿到属于自己的流量。。当你把它和真实生活挂钩时，算法自然会长出共鸣。", "platform": "xhs", "type": "情感共鸣"}, {"title": "被老师打女生确诊焦虑：当妈要给孩子撑腰", "tag": "#正能量 #带娃成长 #女性力量", "desc": "女生被老师打确诊焦虑，心疼。咱当妈的，要努力搞钱、长本事，才能给孩子撑腰。别让娃受委屈，自己先强大。。当你把它和真实生活挂钩时，算法自然会长出共鸣。。不需要华丽机位，真实和扎心就是这条赛道最大的流量密码。", "platform": "douyin", "type": "情感共鸣"}], "remix_angles": [{"hot": "郑钦文遭逆转止步首轮", "type": "热点", "angle": "郑钦文输球但拼搏精神值得学。拍娃在户外跑步摔倒了爬起来，配文案：输赢都是成长，妈妈做自媒体也一样，今天数据不好明天再来。", "copywriting": "借体育热点+孩子日常，用『输赢』制造反差，激发宝妈共鸣：坚持就是胜利。。情绪真实、戳心、金句密集，是它破圈的关键。", "imitate": "输赢不重要，重要的是爬起来继续跑 | 今天数据不好？没事，明天再来，妈妈和娃一起成长"}, {"hot": "国家助学贷款怎么申请", "type": "热点", "angle": "助学贷款政策是很多家庭的希望。拍娃在书桌前写作业的背影，配文案：妈妈现在努力搞自媒体，就是为了将来你上学不用愁钱。。用具体场景引发共鸣，比空洞口号更容易获得流量。", "copywriting": "政策热点+孩子学习场景，用『未来』引发宝妈对子女教育的焦虑和动力。。它用宝妈视角把热点翻译成了生活，让人一看就觉得『说我了』。", "imitate": "妈妈现在搞钱，就是为了你将来不用为学费发愁 | 助学贷款是后路，妈妈想给你更多选择"}, {"hot": "家人来到我的出租屋belike", "type": "热点", "angle": "拍娃在出租屋里玩耍或和家人视频的温馨画面，配文案：虽然房子是租的，但爱是真的。妈妈努力搞钱，想给你一个更安稳的家。。先共情再给方法，观众才愿意留下来看你的自媒体。", "copywriting": "生活场景+情感共鸣，用『出租屋』拉近与宝妈的距离，传递温暖正能量。。把大词拆成小日子，才是这条赛道最稳的流量密码。", "imitate": "出租屋虽小，有娃有爱就是家 | 妈妈现在努力，是想让这个家越来越大"}, {"hot": "初中生曝光侵华日军罪证被死亡威胁", "type": "新闻", "angle": "拍娃在户外拿着小国旗或参观博物馆的照片，配文案：爱国要从小教起。妈妈搞自媒体，也想传递正能量，让娃以妈妈为荣。。把热点放进宝妈的真实生活里，让观众觉得说的就是自己。", "copywriting": "正能量新闻+教育视角，激发宝妈对子女价值观培养的重视。。它不喊口号，只讲带娃间隙的真实挣扎，反而最动人。", "imitate": "爱国从娃抓起，妈妈也在努力做个正直的人 | 传递正能量，让娃以妈妈为荣"}, {"hot": "女子高铁上叫嚣全家体制内", "type": "新闻", "angle": "拍娃在高铁上或公共场合安静乖巧的照片，配文案：真正的底气不是靠别人，是自己挣来的。妈妈在搞钱，就是想给你做个好榜样。。用具体场景引发共鸣，比空洞口号更容易获得流量。", "copywriting": "社会新闻+反面教材，用『底气』引发宝妈对独立自主的认同。。情绪真实、戳心、金句密集，是它破圈的关键。", "imitate": "靠山山会倒，靠自己最牢 | 妈妈在努力，就是想给你做个独立的好榜样"}, {"hot": "被老师殴打女生确诊焦虑抑郁", "type": "新闻", "angle": "拍娃在学校或户外开心玩耍的照片，配文案：妈妈努力搞钱、长本事，就是为了能给你撑腰，不让你受委屈。。先共情再给方法，观众才愿意留下来看你的自媒体。", "copywriting": "社会新闻+母爱视角，激发宝妈保护孩子的本能和搞钱动力。。它用宝妈视角把热点翻译成了生活，让人一看就觉得『说我了』。", "imitate": "妈妈在努力，就是为了能给你撑腰 | 不让你受委屈，是妈妈搞钱的动力"}, {"hot": "周星驰《少林足球》：做人如果没有梦想，跟咸鱼有什么分别", "type": "明星发言", "angle": "拍娃在户外追逐梦想（比如踢球、跳舞）的照片，配文案：星爷的话戳中了妈妈。妈妈也有梦想，就是通过自媒体搞钱，给你更好的生活。", "copywriting": "经典台词+孩子梦想场景，用『梦想』激励宝妈坚持自媒体。。把大词拆成小日子，才是这条赛道最稳的流量密码。", "imitate": "做人如果没有梦想，跟咸鱼有什么分别 | 妈妈在做自媒体，就是在追梦"}, {"hot": "李宗盛《山丘》：越过山丘，才发现无人等候", "type": "热门歌曲", "angle": "拍娃在山丘或高处眺望的背影，配文案：越过山丘，才发现妈妈要自己强大。搞钱的路很难，但为了娃，妈妈愿意翻山越岭。。用具体场景引发共鸣，比空洞口号更容易获得流量。", "copywriting": "经典歌词+孩子背影，用『山丘』隐喻自媒体路上的坎坷，引发共鸣。。它不喊口号，只讲带娃间隙的真实挣扎，反而最动人。", "imitate": "越过山丘，妈妈要自己强大 | 搞钱的路再难，为了娃也值得翻山越岭"}, {"hot": "五月天《倔强》：逆风的方向，更适合飞翔", "type": "热门歌曲", "angle": "拍娃在逆风中奔跑或放风筝的照片，配文案：逆风的方向，更适合飞翔。妈妈做自媒体不被看好，但偏要倔强地飞给所有人看。。先共情再给方法，观众才愿意留下来看你的自媒体。", "copywriting": "经典歌词+孩子逆风场景，用『倔强』传递宝妈不服输的精神。。情绪真实、戳心、金句密集，是它破圈的关键。", "imitate": "逆风的方向，更适合飞翔 | 妈妈做自媒体，偏要倔强地飞给所有人看"}, {"hot": "曝克莱或将寻求买断离开独行侠", "type": "热点", "angle": "拍娃在球场或户外追逐篮球的照片，配文案：克莱要离开独行侠，人生就是不断选择。妈妈也在选择——选择搞自媒体，选择给孩子更好的未来。", "copywriting": "体育热点+人生选择，用『选择』引发宝妈对现状的思考。。它用宝妈视角把热点翻译成了生活，让人一看就觉得『说我了』。", "imitate": "人生就是不断选择 | 妈妈选择了搞自媒体，就是选择了给孩子更好的未来"}], "image_copywriting": [{"hook": "被这段话戳中了，你中了几条", "hot_source": "人名日报金句·关于释怀", "quote": "人生没有最好的年龄，只有最好的心态。\n我们争不过岁月，也跑不过时间。", "reflection": "带娃的路上，心态决定一切。\n妈妈努力搞钱，不为争过岁月，只为给你更多选择。", "body_long": "人生没有最好的年龄，只有最好的心态。\n我们争不过岁月，也跑不过时间。\n唯有以自己喜欢的方式，过好每一个日出日落。\n带娃的路上，心态决定一切。\n妈妈努力搞钱，不为争过岁月，只为给你更多选择。\n今天数据不好？没关系，心态放平，明天继续。\n柴米油盐里，藏着妈妈的小梦想。\n还没赚到第一笔，但离目标又近了一步。\n娃的笑脸，就是妈妈最好的动力。", "body_short": "人生没有最好的年龄，只有最好的心态。\n带娃的路上，心态决定一切。\n妈妈努力搞钱，只为给你更多选择。\n今天数据不好？没关系，明天继续。\n还没赚到第一笔，但心态要对。", "title": "谁懂啊！心态对了带娃搞钱都顺了", "img_text": "谁懂啊！心态对了带娃搞钱都顺了\n人生没有最好的年龄，只有最好的心态。\n我们争不过岁月，也跑不过时间。\n带娃的路上，心态决定一切。\n妈妈努力搞钱，不为争过岁月，\n只为给你更多选择。"}, {"hook": "这就是安全感：手里有劲眼里有光", "hot_source": "通透句库·关于底气", "quote": "我的靠山是我自己，我的坏情绪都是自己扛过来的。\n能替我撑腰的那个人，是我心中打不败的自己。", "reflection": "妈妈的安全感，不是靠别人给的。\n是带娃搞钱时，自己一点点挣来的底气。", "body_long": "我的靠山是我自己，我的坏情绪都是自己扛过来的。\n能替我撑腰的那个人，是我心中打不败的自己。\n妈妈的安全感，不是靠别人给的。\n是带娃搞钱时，自己一点点挣来的底气。\n还没赚到第一笔，但心里有光，就不怕黑。\n娃看着妈妈努力，也会学会坚强。\n柴米油盐里，妈妈在偷偷长本事。\n不靠任何人，自己就是最大的底气。\n姐妹们，一起做自己的靠山。\n强大自己，才是硬道理。", "body_short": "我的靠山是我自己。\n妈妈的安全感，是自己挣来的底气。\n还没赚到第一笔，但心里有光。\n娃看着妈妈努力，也会学会坚强。\n不靠任何人，自己就是靠山。\n强大自己，才是硬道理。", "title": "救命！安全感全靠自己给", "img_text": "救命！安全感全靠自己给\n我的靠山是我自己，我的坏情绪都是自己\n扛过来的。能替我撑腰的那个人，\n是我心中打不败的自己。\n妈妈的安全感，不是靠别人给的。\n是带娃搞钱时，自己一点点挣来的底气。"}, {"hook": "强大自己才是硬道理当妈才懂", "hot_source": "抖音热搜·家人来到我的出租屋belike", "quote": "家人来到我的出租屋belike。\n有爱的地方就是家。", "reflection": "出租屋虽小，有娃有爱就是家。\n妈妈努力搞钱，是想让这个家越来越大。", "body_long": "家人来到我的出租屋belike。\n有爱的地方就是家。\n出租屋虽小，有娃有爱就是家。\n妈妈努力搞钱，是想让这个家越来越大。\n还没赚到第一笔，但每天都有奔头。\n娃的笑声，就是家里最亮的灯。\n柴米油盐里，藏着妈妈的小幸福。\n不羡慕大房子，只羡慕有爱的家。\n姐妹们，一起把出租屋过成家。\n有爱，就有全世界。", "body_short": "有爱的地方就是家。\n出租屋虽小，有娃有爱就是家。\n妈妈努力搞钱，想让家越来越大。\n还没赚到第一笔，但每天有奔头。\n娃的笑声，就是家里最亮的灯。\n柴米油盐里，藏着妈妈的小幸福。", "title": "太真实了！出租屋里的搞钱日常", "img_text": "太真实了！出租屋里的搞钱日常\n家人来到我的出租屋belike。\n有爱的地方就是家。\n出租屋虽小，有娃有爱就是家。\n妈妈努力搞钱，是想让这个家越来越大。"}, {"hook": "强大自己才是硬道理太真实", "hot_source": "明星发言·周星驰《少林足球》", "quote": "做人如果没有梦想，跟咸鱼有什么分别。\n我是一个演员。", "reflection": "妈妈也有梦想，就是做自媒体搞钱。\n为了娃，妈妈不想做咸鱼，要做超人。", "body_long": "做人如果没有梦想，跟咸鱼有什么分别。\n我是一个演员。\n妈妈也有梦想，就是做自媒体搞钱。\n为了娃，妈妈不想做咸鱼，要做超人。\n还没赚到第一笔，但梦想一直在。\n每天刷推荐页、学剪辑，离目标更近。\n娃睡着后，就是妈妈的追梦时间。\n柴米油盐里，梦想在悄悄发芽。\n姐妹们，别放弃，有梦就去追。\n强大自己，才是给娃最好的礼物。", "body_short": "做人如果没有梦想，跟咸鱼有什么分别。\n妈妈也有梦想，就是做自媒体搞钱。\n为了娃，妈妈不想做咸鱼。\n还没赚到第一笔，但梦想一直在。\n娃睡着后，就是妈妈的追梦时间。\n强大自己，才是给娃最好的礼物。", "title": "被星爷的话骂醒了！宝妈也要有梦想", "img_text": "被星爷的话骂醒了！宝妈也要有梦想\n做人如果没有梦想，跟咸鱼有什么分别。\n我是一个演员。\n妈妈也有梦想，就是做自媒体搞钱。\n为了娃，妈妈不想做咸鱼，要做超人。"}, {"hook": "柴米油盐里的英雄主义女性必看", "hot_source": "热门歌曲·五月天《倔强》", "quote": "逆风的方向，更适合飞翔。\n我不怕千万人阻挡，只怕自己投降。", "reflection": "妈妈做自媒体，就是逆风飞翔。\n为了娃，再难也不投降，偏要倔强到底。", "body_long": "逆风的方向，更适合飞翔。\n我不怕千万人阻挡，只怕自己投降。\n妈妈做自媒体，就是逆风飞翔。\n为了娃，再难也不投降，偏要倔强到底。\n还没赚到第一笔，但倔强的心一直在。\n数据不好？那就再坚持一下。\n柴米油盐里，妈妈在悄悄变强。\n娃看着妈妈倔强的样子，也会学会坚持。\n姐妹们，一起倔强地飞。", "body_short": "逆风的方向，更适合飞翔。\n妈妈做自媒体，就是逆风飞翔。\n为了娃，再难也不投降。\n还没赚到第一笔，但倔强的心一直在。\n柴米油盐里，妈妈在悄悄变强。\n逆风的方向，才能飞到想去的地方。", "title": "谁懂啊！带娃搞钱就得倔强", "img_text": "谁懂啊！带娃搞钱就得倔强\n逆风的方向，更适合飞翔。\n我不怕千万人阻挡，只怕自己投降。\n妈妈做自媒体，就是逆风飞翔。\n为了娃，再难也不投降，偏要倔强到底。"}, {"hook": "被这段话骂醒了，搞钱才是王", "hot_source": "通透句库·关于圈子", "quote": "跟赚钱的人混看到的是机会，跟抱怨的人混眼里全是困难。\n跟有结果的人混学到的是方法，跟混日子的混最后连梦想都会丢掉。", "reflection": "妈妈选择跟搞钱的姐妹混，学着做自媒体。\n为了娃，不想混日子，只想给娃更好的未来。", "body_long": "跟赚钱的人混看到的是机会，跟抱怨的人混眼里全是困难。\n跟有结果的人混学到的是方法，跟混日子的混最后连梦想都会丢掉。\n妈妈选择跟搞钱的姐妹混，学着做自媒体。\n为了娃，不想混日子，只想给娃更好的未来。\n还没赚到第一笔，但圈子对了，方向就对了。\n每天跟正能量的人在一起，自己也有劲。\n柴米油盐里，妈妈在悄悄换圈子。\n娃也会看到妈妈在努力，学会向上。\n姐妹们，一起靠近优秀的人。\n圈子对了，搞钱就快了。", "body_short": "跟赚钱的人混看到的是机会。\n妈妈选择跟搞钱的姐妹混。\n为了娃，不想混日子。\n还没赚到第一笔，但圈子对了。\n每天跟正能量的人在一起，自己也有劲。\n圈子对了，搞钱就快了。", "title": "救命！圈子决定命运，宝妈快换圈", "img_text": "救命！圈子决定命运，宝妈快换圈\n跟赚钱的人混看到的是机会，\n跟抱怨的人混眼里全是困难。\n跟有结果的人混学到的是方法，\n跟混日子的混最后连梦想都会丢掉。\n妈妈选择跟搞钱的姐妹混，学着做自媒体。\n为了娃，不想混日子，只想给娃更好的未来。"}, {"hook": "别让柴米油盐埋没了你自己", "hot_source": "人名日报金句·关于释怀", "quote": "永远不要去责怪你生命中的任何人。\n好的人给你快乐，坏的人给你经历。", "reflection": "妈妈不怪任何人，只怪自己不够强。\n所以拼命搞自媒体，想给娃更多底气。", "body_long": "永远不要去责怪你生命中的任何人。\n好的人给你快乐，坏的人给你经历。\n妈妈不怪任何人，只怪自己不够强。\n所以拼命搞自媒体，想给娃更多底气。\n还没赚到第一笔，但每天都在进步。\n经历过的苦，都会变成未来的甜。\n柴米油盐里，妈妈在积累底气。\n娃的笑容，就是妈妈最好的回报。\n姐妹们，不抱怨，只努力。\n自己强大了，世界才会对你温柔。", "body_short": "永远不要去责怪任何人。\n妈妈只怪自己不够强。\n所以拼命搞自媒体，给娃更多底气。\n还没赚到第一笔，但每天都在进步。\n经历过的苦，都会变成未来的甜。\n自己强大了，世界才会对你温柔。", "title": "太扎心了！不怪别人只怪自己不够强", "img_text": "太扎心了！不怪别人只怪自己不够强\n永远不要去责怪你生命中的任何人。\n好的人给你快乐，坏的人给你经历。\n妈妈不怪任何人，只怪自己不够强。\n所以拼命搞自媒体，想给娃更多底气。"}, {"hook": "柴米油盐里，藏着搞钱逻辑", "hot_source": "抖音热搜·女子高铁上叫嚣全家体制内", "quote": "女子高铁叫嚣全家体制内。\n靠山山会倒，靠人人会跑。", "reflection": "妈妈靠的是自己，不是别人。\n努力搞自媒体，就是不想让娃被人看不起。", "body_long": "女子高铁叫嚣全家体制内。\n靠山山会倒，靠人人会跑。\n妈妈靠的是自己，不是别人。\n努力搞自媒体，就是不想让娃被人看不起。\n还没赚到第一笔，但底气在慢慢长。\n娃不需要靠谁，妈妈就是他的靠山。\n柴米油盐里，妈妈在偷偷变强。\n不叫嚣，只默默努力。\n姐妹们，一起做自己的靠山。\n自己强了，才是最大的体面。", "body_short": "靠山山会倒，靠人人会跑。\n妈妈靠的是自己。\n努力搞自媒体，不想让娃被人看不起。\n还没赚到第一笔，但底气在慢慢长。\n娃不需要靠谁，妈妈就是他的靠山。\n自己强了，才是最大的体面。", "title": "谁懂啊！靠自己才是真底气", "img_text": "谁懂啊！靠自己才是真底气\n女子高铁叫嚣全家体制内。\n靠山山会倒，靠人人会跑。\n妈妈靠的是自己，不是别人。\n努力搞自媒体，就是不想让娃被人看不起。"}, {"hook": "被这句话共情了，独立才自由", "hot_source": "热门歌曲·李宗盛《山丘》", "quote": "越过山丘，才发现无人等候。\n喋喋不休，时不我予的哀愁。", "reflection": "妈妈越过带娃的山丘，发现只能靠自己。\n搞自媒体这条路，再难也要走下去。", "body_long": "越过山丘，才发现无人等候。\n喋喋不休，时不我予的哀愁。\n妈妈越过带娃的山丘，发现只能靠自己。\n搞自媒体这条路，再难也要走下去。\n还没赚到第一笔，但山丘还在翻越。\n娃在前面跑，妈妈在后面追。\n柴米油盐里，妈妈在翻越一座座山。\n不哀愁，只行动。\n姐妹们，一起翻过山丘。\n山丘那边，有更好的自己在等。", "body_short": "越过山丘，才发现无人等候。\n妈妈只能靠自己。\n搞自媒体再难也要走下去。\n还没赚到第一笔，但山丘还在翻越。\n娃在前面跑，妈妈在后面追。\n山丘那边，有更好的自己在等。", "title": "太戳心了！带娃搞钱就是翻山越岭", "img_text": "太戳心了！带娃搞钱就是翻山越岭\n越过山丘，才发现无人等候。\n喋喋不休，时不我予的哀愁。\n妈妈越过带娃的山丘，发现只能靠自己。\n搞自媒体这条路，再难也要走下去。"}, {"hook": "房贷压力倒逼我开启了副业", "hot_source": "抖音热搜·郑钦文遭逆转止步首轮", "quote": "郑钦文遭逆转止步首轮。\n输赢都是成长的一部分。", "reflection": "妈妈做自媒体，数据不好也是成长。\n为了娃，输得起，也赢得起。", "body_long": "郑钦文遭逆转止步首轮。\n输赢都是成长的一部分。\n妈妈做自媒体，数据不好也是成长。\n为了娃，输得起，也赢得起。\n还没赚到第一笔，但每天都在成长。\n娃看着妈妈不放弃，也会学会坚韧。\n柴米油盐里，妈妈在悄悄进步。\n不害怕输，只害怕不成长。\n姐妹们，一起把输赢看淡。\n成长了，就是最大的赢家。", "body_short": "输赢都是成长的一部分。\n妈妈做自媒体，数据不好也是成长。\n为了娃，输得起，也赢得起。\n还没赚到第一笔，但每天都在成长。\n娃看着妈妈不放弃，也会学会坚韧。\n成长了，就是最大的赢家。", "title": "谁懂啊！带娃搞钱输得起才赢得起", "img_text": "谁懂啊！带娃搞钱输得起才赢得起\n郑钦文遭逆转止步首轮。\n输赢都是成长的一部分。\n妈妈做自媒体，数据不好也是成长。\n为了娃，输得起，也赢得起。"}], "english": {"words": [{"word": "mom", "phonetic": "/mɑːm/", "meaning": "妈妈", "example": "I am a mom."}, {"word": "money", "phonetic": "/ˈmʌni/", "meaning": "钱", "example": "I need money."}, {"word": "baby", "phonetic": "/ˈbeɪbi/", "meaning": "宝宝", "example": "My baby is cute."}, {"word": "work", "phonetic": "/wɜːrk/", "meaning": "工作", "example": "I work hard."}, {"word": "happy", "phonetic": "/ˈhæpi/", "meaning": "快乐的", "example": "I am happy."}], "grammar": "主谓宾：I (主语) + work (谓语) + hard (状语).", "shadow": "I work hard for my baby."}, "mental_math": [{"q": "7 * 5 = ?", "a": 35}, {"q": "59 + 75 = ?", "a": 134}, {"q": "65 - 28 = ?", "a": 37}, {"q": "9 * 9 = ?", "a": 81}, {"q": "64 + 23 = ?", "a": 87}, {"q": "24 + 35 = ?", "a": 59}, {"q": "94 - 45 = ?", "a": 49}, {"q": "5 * 3 = ?", "a": 15}, {"q": "96 - 69 = ?", "a": 27}, {"q": "3 * 7 = ?", "a": 21}, {"q": "10 * 5 = ?", "a": 50}, {"q": "7 * 4 = ?", "a": 28}, {"q": "46 - 22 = ?", "a": 24}, {"q": "52 + 67 = ?", "a": 119}, {"q": "8 * 4 = ?", "a": 32}, {"q": "53 - 24 = ?", "a": 29}, {"q": "93 - 49 = ?", "a": 44}, {"q": "7 * 8 = ?", "a": 56}, {"q": "88 - 52 = ?", "a": 36}, {"q": "61 + 57 = ?", "a": 118}]};
+
+/* ============ 拉取 Gist ============ */
+async function loadDaily(force){
+  if(force){ $id('refreshBtn').classList.add('spin'); }
+  try{
+    const data = __PREVIEW_DATA__;
+    state.daily = data;
+    LS('mama_daily_cache', data);
+    setStatus('📌 验收预览（本地数据） ' + (data.updated_at||'').replace('T',' '));
+  }catch(e){
+    setStatus('预览数据加载失败');
+  }finally{
+    $id('refreshBtn').classList.remove('spin');
+    renderAll();
+    openView('inspire');
+    setInspireTab('img');
+  }
+}
+function setStatus(t){ $id('homeStatus').textContent = t; }
+
+/* ============ 首页 ============ */
+function renderHome(){
+  const d = state.daily || {};
+  const h = new Date().getHours();
+  $id('heroHi').textContent = h<11?'早安，今天也要加油呀':(h<18?'午安，创作进度如何？':'晚安，记得复盘今天');
+  const now = new Date();
+  $id('heroDate').textContent = now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  $id('subDate').textContent = now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
+  const ins = (d.topic_inspirations||[]).length;
+  const rem = (d.remix_angles||[]).length;
+  const img = (d.image_copywriting||[]).length;
+  const enw = ((d.english||{}).words||[]).length;
+  $id('homeStat').innerHTML =
+    '<div class="b"><div class="n">'+ins+'</div><div class="l">选题</div></div>'+
+    '<div class="b"><div class="n">'+rem+'</div><div class="l">二创</div></div>'+
+    '<div class="b"><div class="n">'+img+'</div><div class="l">图片</div></div>'+
+    '<div class="b"><div class="n">'+enw+'</div><div class="l">单词</div></div>';
+}
+function renderAll(){
+  renderHome(); renderPlan(); renderMemo(); renderReview();
+  renderMath(); renderEnglish(); renderInspire(); renderImg(); renderRemix();
+}
+
+/* ============ 每日计划 ============ */
+function getPlan(){
+  const t = today();
+  let p = LS('mama_plan');
+  if(!p || p.date!==t){
+    p = {date:t, items:[
+      {t:'发一条今日选题视频',done:false},
+      {t:'写 3 条图片文案',done:false},
+      {t:'做一次内容复盘',done:false}
+    ]};
+    LS('mama_plan', p);
+  }
+  return p;
+}
+function renderPlan(){
+  const p = getPlan();
+  const done = p.items.filter(i=>i.done).length;
+  const total = p.items.length;
+  const pct = total? Math.round(done/total*100):0;
+  $id('planBar').style.width = pct+'%';
+  $id('planCount').textContent = done+'/'+total;
+  $id('planPct').textContent = '完成度 '+pct+'%';
+  $id('planList').innerHTML = p.items.map((it,i)=>
+    '<div class="item '+(it.done?'done':'')+'">'+
+      '<div class="cb" onclick="togglePlan('+i+')">'+(it.done?'✓':'')+'</div>'+
+      '<textarea class="tx" rows="1" oninput="editPlan('+i+',this.value)">'+esc(it.t)+'</textarea>'+
+      '<button class="del" onclick="delPlan('+i+')">✕</button>'+
+    '</div>').join('') || '<div class="empty">还没有计划，加一项吧</div>';
+}
+function togglePlan(i){ const p=getPlan(); p.items[i].done=!p.items[i].done; LS('mama_plan',p); renderPlan(); }
+function editPlan(i,v){ const p=getPlan(); p.items[i].t=v; LS('mama_plan',p); }
+function delPlan(i){ const p=getPlan(); p.items.splice(i,1); LS('mama_plan',p); renderPlan(); }
+function addPlan(){ const v=$id('planInput').value.trim(); if(!v) return; const p=getPlan(); p.items.push({t:v,done:false}); LS('mama_plan',p); $id('planInput').value=''; renderPlan(); }
+
+/* ============ 选题灵感 + 图片文案 ============ */
+function setInspireTab(tab){
+  state.inspireTab = tab;
+  $id('tabIdea').classList.toggle('active', tab==='idea');
+  $id('tabImg').classList.toggle('active', tab==='img');
+  $id('inspireList').classList.toggle('hidden', tab!=='idea');
+  $id('imgList').classList.toggle('hidden', tab!=='img');
+}
+function renderInspire(){
+  const list = (state.daily&&state.daily.topic_inspirations)||[];
+  if(!list.length){ $id('inspireList').innerHTML = emptyHTML(); return; }
+  $id('inspireList').innerHTML = list.map(x=>{
+    const p = x.platform||'douyin';
+    const pm = {douyin:'抖音',bili:'B站',xhs:'小红书'}[p]||'抖音';
+    const type = x.type||'灵感';
+    return '<div class="post">'+
+      '<div style="margin-bottom:6px;"><span class="badge">'+esc(type)+'</span></div>'+
+      '<div class="ttl">'+esc(x.title)+'</div>'+
+      '<div class="tag">'+esc(x.tag||'')+'</div>'+
+      '<div class="desc">'+esc(x.desc||'')+'</div>'+
+      '<div class="row">'+
+        '<button class="jump j-douyin" onclick="openApp(\'douyin\',\''+esc(x.title)+'\')">抖音搜</button>'+
+        '<button class="jump j-xhs" onclick="openApp(\'xhs\',\''+esc(x.title)+'\')">小红书</button>'+
+        '<button class="jump j-bili" onclick="openApp(\'bili\',\''+esc(x.title)+'\')">B站</button>'+
+      '</div>'+
+      '<div class="muted" style="margin-top:6px;">推荐主推：<b>'+pm+'</b></div>'+
+    '</div>';
+  }).join('');
+}
+function renderImg(){
+  const list = (state.daily&&state.daily.image_copywriting)||[];
+  if(!list.length){ $id('imgList').innerHTML = emptyHTML(); return; }
+  $id('imgList').innerHTML = list.map((x,i)=>{
+    const hook = x.hook||'';
+    const imgText = x.img_text||'';
+    const bodyLong = x.body_long||'';
+    const bodyShort = x.body_short||'';
+    const hotSource = x.hot_source||'';
+    return '<div class="post img-card">'+
+      '<div class="img-hook"><span>'+esc(hook)+'</span><span class="wc">'+cnLen(hook)+'字</span></div>'+
+      (hotSource?'<div class="img-source">🔥 来源：'+esc(hotSource)+'</div>':'')+
+      '<div class="img-section"><div class="lab">📌 图上正文（标题＋原文＋感悟 合并，直接放图上）<span class="wc">'+cnLen(imgText)+'字</span></div><div class="txt img-onpic">'+esc(imgText)+'</div><div class="img-hint">放图位置：图片上半部留白处，或衣服/背景空白处；图片只够放这一块，长版短版用作图文正文（见下）。</div></div>'+
+      '<div class="img-cont">'+
+        '<div class="lab">延展正文 · 长版（用作图文描述）<span class="wc">'+cnSents(bodyLong).length+'句</span></div>'+
+        '<div class="txt">'+esc(bodyLong)+'</div>'+
+        '<div class="lab" style="margin-top:10px;">延展正文 · 短版（用作图文描述）<span class="wc">'+cnSents(bodyShort).length+'句</span></div>'+
+        '<div class="txt" style="background:var(--pink-soft);">'+esc(bodyShort)+'</div>'+
+      '</div>'+
+      '<button class="btn sm ghost" style="margin-top:12px;" onclick="copyImg('+i+')">📋 复制整段图片文案</button>'+
+    '</div>';
+  }).join('');
+}
+function copyImg(i){
+  const x = (state.daily.image_copywriting||[])[i]; if(!x) return;
+  const parts = [
+    '【勾子】'+(x.hook||''),
+    '',
+    '【图上正文 · 直接放图上（'+cnLen(x.img_text||'')+'字）】',
+    (x.img_text||''),
+    '',
+    '— — — — — — — —',
+    '',
+    '【延展正文 · 长版】'+(x.body_long||''),
+    '',
+    '【延展正文 · 短版】'+(x.body_short||'')
+  ];
+  navigator.clipboard.writeText(parts.join('\n')).then(()=>toast('已复制图片文案')).catch(()=>toast('复制失败，请手动'));
+}
+function emptyHTML(){ return '<div class="empty"><div class="big">📭</div>今日内容还在生成中，点右下角「刷新今日」试试</div>'; }
+
+/* ============ 爆款二创 ============ */
+function renderRemix(){
+  const list = (state.daily&&state.daily.remix_angles)||[];
+  if(!list.length){ $id('remixList').innerHTML = emptyHTML(); return; }
+  $id('remixList').innerHTML = list.map(x=>{
+    const imitates = (x.imitate||'').split('|').map(s=>s.trim()).filter(Boolean);
+    const imitateHTML = imitates.length ?
+      '<div class="img-section"><div class="lab">可直接套用的开头句式</div>'+
+      imitates.map((t,idx)=>'<div class="tpl-item"><b>'+(idx+1)+'.</b> '+esc(t)+'</div>').join('')+
+      '</div>' : '';
+    return '<div class="post">'+
+      '<div style="margin-bottom:8px;"><span class="badge">'+esc(x.type||'热点')+'</span></div>'+
+      '<div class="ttl">'+esc(x.hot||'')+'</div>'+
+      '<div class="meta"><b>改编角度：</b>'+esc(x.angle||'')+'</div>'+
+      '<div class="meta"><b>学习爆火文案：</b>'+esc(x.copywriting||'')+'</div>'+
+      imitateHTML+
+    '</div>';
+  }).join('');
+}
+
+/* ============ 内容复盘 ============ */
+function getReviews(){ return LS('mama_reviews')||[]; }
+function renderReview(){
+  const arr = getReviews();
+  $id('rvCount').textContent = arr.length;
+  if(!arr.length){ $id('reviewList').innerHTML = '<div class="empty">还没有复盘，拍完一条就记下来吧</div>'; return; }
+  $id('reviewList').innerHTML = arr.slice().reverse().map(r=>
+    '<div class="post" style="border-left-color:var(--ok);">'+
+      '<div class="ttl" style="font-size:15px;">'+esc(r.platform)+' · '+esc(r.date)+'</div>'+
+      '<div class="meta">播放 <b>'+(r.play||0)+'</b> ｜ 点赞 <b>'+(r.like||0)+'</b> ｜ 评论 <b>'+(r.comment||0)+'</b> ｜ 转发 <b>'+(r.share||0)+'</b></div>'+
+      (r.good?'<div class="meta"><b>亮点：</b>'+esc(r.good)+'</div>':'')+
+      (r.bad?'<div class="meta"><b>问题：</b>'+esc(r.bad)+'</div>':'')+
+      (r.opt?'<div class="meta"><b>优化：</b>'+esc(r.opt)+'</div>':'')+
+    '</div>').join('');
+}
+function saveReview(){
+  const r = {
+    platform:$id('rvPlatform').value, date:$id('rvDate').value||today(),
+    play:$id('rvPlay').value||0, like:$id('rvLike').value||0,
+    comment:$id('rvComment').value||0, share:$id('rvShare').value||0,
+    good:$id('rvGood').value.trim(), bad:$id('rvBad').value.trim(), opt:$id('rvOpt').value.trim()
+  };
+  if(!r.good && !r.bad && !r.opt){ toast('至少写点亮点/问题/优化'); return; }
+  const arr = getReviews(); arr.push(r); LS('mama_reviews', arr);
+  ['rvPlay','rvLike','rvComment','rvShare','rvGood','rvBad','rvOpt'].forEach(id=>$id(id).value='');
+  renderReview(); toast('复盘已保存');
+}
+
+/* ============ 备忘录 ============ */
+function getMemo(){
+  let m = LS('mama_memo');
+  if(!m){ m = [{t:'',done:false},{t:'',done:false},{t:'',done:false},{t:'',done:false},{t:'',done:false}]; LS('mama_memo',m); }
+  return m;
+}
+function renderMemo(){
+  const m = getMemo();
+  $id('memoList').innerHTML = m.map((it,i)=>
+    '<div class="item '+(it.done?'done':'')+'">'+
+      '<div class="cb" onclick="toggleMemo('+i+')">'+(it.done?'✓':'')+'</div>'+
+      '<textarea class="tx" rows="1" placeholder="记点什么…" oninput="editMemo('+i+',this.value)">'+esc(it.t)+'</textarea>'+
+      '<button class="del" onclick="delMemo('+i+')">✕</button>'+
+    '</div>').join('');
+}
+function toggleMemo(i){ const m=getMemo(); m[i].done=!m[i].done; LS('mama_memo',m); renderMemo(); }
+function editMemo(i,v){ const m=getMemo(); m[i].t=v; LS('mama_memo',m); }
+function delMemo(i){ const m=getMemo(); m.splice(i,1); LS('mama_memo',m); renderMemo(); }
+function addMemo(){ const v=$id('memoInput').value.trim(); if(!v) return; const m=getMemo(); m.push({t:v,done:false}); LS('mama_memo',m); $id('memoInput').value=''; renderMemo(); }
+
+/* ============ 速算练习 ============ */
+function getMath(){
+  const d = state.daily||{};
+  if(d.mental_math && d.mental_math.length) return d.mental_math;
+  const prob=[]; const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+  for(let i=0;i<20;i++){ const t=['+','-','*'][rnd(0,2)];
+    let a,b,ans; if(t==='+'){a=rnd(10,99);b=rnd(10,99);ans=a+b;} else if(t==='-'){a=rnd(20,99);b=rnd(10,99);if(b>a)[a,b]=[b,a];ans=a-b;} else {a=rnd(2,12);b=rnd(2,9);ans=a*b;}
+    prob.push({q:a+' '+t+' '+b+' = ?',a:ans});
+  }
+  return prob;
+}
+function renderMath(){
+  const arr = getMath(); state._math = arr; state.mathIdx = Math.min(state.mathIdx, arr.length-1);
+  showMath();
+  $id('mathProg').textContent = (state.mathIdx+1)+'/'+arr.length;
+}
+function showMath(){
+  const arr = state._math||[]; if(!arr.length) return;
+  const it = arr[state.mathIdx];
+  $id('mathQ').textContent = it.q;
+  $id('mathA').value=''; $id('mathR').textContent='';
+}
+function checkMath(){
+  const arr = state._math||[]; const it = arr[state.mathIdx]; if(!it) return;
+  const v = parseFloat($id('mathA').value);
+  if(isNaN(v)){ toast('先写答案'); return; }
+  if(Math.abs(v-it.a)<1e-6){ $id('mathR').textContent='✅ 正确：'+it.a; state.mathRight++; }
+  else { $id('mathR').textContent='❌ 正确答案：'+it.a; state.mathWrong++; }
+  $id('mathScore').textContent = '对 '+state.mathRight+' ／ 错 '+state.mathWrong;
+}
+function mathNext(){ if(state.mathIdx < (state._math||[]).length-1){ state.mathIdx++; showMath(); $id('mathProg').textContent=(state.mathIdx+1)+'/'+(state._math||[]).length; } }
+function mathPrev(){ if(state.mathIdx>0){ state.mathIdx--; showMath(); $id('mathProg').textContent=(state.mathIdx+1)+'/'+(state._math||[]).length; } }
+function reloadMath(){ state.mathIdx=0; state.mathRight=0; state.mathWrong=0; renderMath(); toast('已换一批'); }
+
+/* ============ 英语练习 ============ */
+const EN_PLAN = [
+  '第1-5天：26个字母 + 基础发音，先敢开口',
+  '第6-10天：50个最高频词（我/你/吃/喝/妈妈/宝宝…）',
+  '第11-15天：主谓宾短句，每天 5 句跟读',
+  '第16-20天：日常场景词（起床/吃饭/睡觉/超市）',
+  '第21-25天：疑问句 + 简单对话',
+  '第26-30天：影子跟读新闻/儿歌，模仿语音语调'
+];
+function renderEnglish(){
+  const dayNum = Math.floor((Date.now()-Date.parse('2026-01-01'))/86400000) % 30;
+  const phase = Math.min(5, Math.floor(dayNum/5));
+  $id('enPlan').innerHTML = EN_PLAN.map((p,i)=>(i===phase?'👉 ':'　　')+p).join('<br>');
+  $id('enDay').textContent = '今日建议：'+EN_PLAN[phase];
+  const en = (state.daily&&state.daily.english)||{};
+  const words = en.words||[];
+  $id('enWords').innerHTML = words.length? words.map(w=>
+    '<div class="word">'+
+      '<div style="flex:1;">'+
+        '<div class="en">'+esc(w.word)+'</div>'+
+        '<div class="ph">'+esc(w.phonetic||'')+'</div>'+
+        '<div class="mn">'+esc(w.meaning||'')+'</div>'+
+        '<div class="ex">'+esc(w.example||'')+'</div>'+
+      '</div>'+
+      '<button class="spk" onclick="speak(\''+esc(w.word)+'\',\'en-US\',0.9)">🔊</button>'+
+      '<button class="spk" onclick="speak(\''+esc(w.example||w.word)+'\',\'en-US\',0.85)">🗣️</button>'+
+    '</div>').join('') : '<div class="empty">今日单词生成中…</div>';
+  $id('enGrammar').textContent = en.grammar || '主谓宾：我(I) 爱(love) 宝宝(baby)。';
+  const sh = en.shadow || 'I am a happy mom and I love my baby.';
+  window._shadow = sh;
+  $id('shadowText').innerHTML = sh.split(/\s+/).map((w,i)=>'<span id="sw'+i+'">'+esc(w)+'</span>').join(' ');
+}
+function speak(text, lang, rate){
+  if(!('speechSynthesis' in window)){ toast('当前浏览器不支持语音'); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang||'en-US'; u.rate = rate||0.9; u.pitch=1;
+    speechSynthesis.speak(u);
+  }catch(e){ toast('语音播放失败'); }
+}
+function shadowPlay(){
+  const words = (window._shadow||'').split(/\s+/);
+  let i = 0;
+  speechSynthesis.cancel();
+  function next(){
+    if(i>=words.length) return;
+    const sp = $id('sw'+i); if(sp) sp.classList.add('hl');
+    const u = new SpeechSynthesisUtterance(words[i]);
+    u.lang='en-US'; u.rate=0.75;
+    u.onend = ()=>{ if(sp) sp.classList.remove('hl'); i++; next(); };
+    speechSynthesis.speak(u);
+  }
+  next();
+}
+let mediaRec=null, recChunks=[];
+function shadowRecord(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){ toast('此设备不支持录音'); return; }
+  if(mediaRec && mediaRec.state==='recording'){
+    mediaRec.stop(); $id('recBtn').textContent='● 录我的'; return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    mediaRec = new MediaRecorder(stream);
+    recChunks=[];
+    mediaRec.ondataavailable = e=>{ if(e.data.size) recChunks.push(e.data); };
+    mediaRec.onstop = ()=>{
+      state.recBlob = new Blob(recChunks,{type:'audio/webm'});
+      $id('pbBtn').style.display='inline-block';
+      toast('录好了，点「听我的」对比');
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mediaRec.start();
+    $id('recBtn').textContent='■ 停止';
+  }).catch(()=>toast('需要麦克风权限'));
+}
+function shadowPlayback(){
+  if(!state.recBlob) return;
+  const a = new Audio(URL.createObjectURL(state.recBlob));
+  a.play();
+}
+function enSearch(eng){
+  const q = $id('enSearch').value.trim(); if(!q){ toast('先输入要搜的内容'); return; }
+  const e = encodeURIComponent(q);
+  const map = {
+    youglish:'https://youglish.com/search/'+e+'/english',
+    youtube:'https://www.youtube.com/results?search_query='+e,
+    bing:'https://www.bing.com/videos/search?q='+e
+  };
+  window.open(map[eng],'_blank');
+}
+
+/* ============ 刷新 ============ */
+function refresh(){ loadDaily(true); toast('正在刷新今日内容…'); }
+
+/* ============ 初始化 ============ */
+(function init(){
+  $id('rvDate').value = today();
+  loadDaily(false);
+})();
+</script>
+</body>
+</html>
