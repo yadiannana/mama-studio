@@ -375,11 +375,8 @@ const state = { daily:null, view:'home', inspireTab:'idea', mathIdx:0, mathRight
 async function loadDaily(force){
   if(force){ $id('refreshBtn').classList.add('spin'); }
   try{
-    const url = 'https://api.github.com/gists/'+GIST_ID + (force?('?t='+Date.now()):'');
-    const r = await fetch(url, {headers:{'Accept':'application/vnd.github+json'}});
-    const d = await r.json();
-    const content = d.files['mama-daily.json'].content;
-    const data = JSON.parse(content);
+    const url = 'https://gist.githubusercontent.com/yadiannana/'+GIST_ID+'/raw/mama-daily.json' + (force?('?t='+Date.now()):'');
+    const data = await (await fetch(url)).json();
     state.daily = data;
     LS('mama_daily_cache', data);
     setStatus('已更新 ' + (data.updated_at||'').replace('T',' '));
